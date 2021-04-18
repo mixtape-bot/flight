@@ -1,6 +1,6 @@
 # Flight
-[![Release](https://jitpack.io/v/devoxin/flight.svg)](https://jitpack.io/#devoxin/flight)
-[![](https://jitci.com/gh/devoxin/flight/svg)](https://jitci.com/gh/devoxin/flight)
+[![Release](https://jitpack.io/v/mixtape-bot/flight.svg)](https://jitpack.io/#mixtape-bot/flight)
+[![](https://jitci.com/gh/mixtape-bot/flight/svg)](https://jitci.com/gh/mixtape-bot/flight)
 
 Flight is a lightweight yet powerful command handler and arg parser for JDA, in Kotlin. It offers numerous utilities and functions for assisting, and speeding up Discord Bot development, allowing you to spend less time on the boring bits, and more on the important bits.
 
@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-  compile 'com.github.Devoxin:Flight:VERSION'
+  compile 'com.github.mixtape-bot:Flight:VERSION'
 }
 ```
 Make sure to replace `VERSION` with the latest Flight version. You can find a list of versions in the releases tab.
