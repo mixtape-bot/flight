@@ -1,12 +1,10 @@
 package me.devoxin.flight.internal.entities
 
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import me.devoxin.flight.api.Context
 import me.devoxin.flight.api.entities.Cog
 import me.devoxin.flight.internal.arguments.Argument
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ThreadPoolExecutor
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.callSuspendBy
@@ -20,19 +18,13 @@ abstract class Executable(
     private val contextParameter: KParameter
 ) {
 
-    open fun execute(ctx: Context, args: HashMap<KParameter, Any?>, complete: (Boolean, Throwable?) -> Unit, executor: ExecutorService?) {
+    open fun execute(ctx: Context, args: HashMap<KParameter, Any?>, complete: (Boolean, Throwable?) -> Unit, dispatcher: CoroutineDispatcher) {
         method.instanceParameter?.let { args[it] = cog }
         args[contextParameter] = ctx
 
-        if (method.isSuspend) {
-            GlobalScope.launch {
+        ctx.commandClient.launch(ctx.commandClient.coroutineContext) {
+            if (method.isSuspend) {
                 executeAsync(args, complete)
-            }
-        } else {
-            if (executor != null) {
-                executor.execute {
-                    executeSync(args, complete)
-                }
             } else {
                 executeSync(args, complete)
             }

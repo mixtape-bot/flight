@@ -16,7 +16,7 @@ buildscript {
 apply plugin: 'kotlin'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-group 'me.devoxin'
+group 'gg.mixtape'
 version '2.1.0'
 sourceCompatibility = 1.8
 

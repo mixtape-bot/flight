@@ -7,7 +7,6 @@ import me.devoxin.flight.internal.utils.Scheduler
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.*
-import net.dv8tion.jda.api.events.Event
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import java.util.regex.Pattern
 
@@ -141,23 +140,6 @@ class Context(
         } finally {
             task.cancel(true)
         }
-    }
-
-    /**
-     * Waits for the given event. Only events that pass the given predicate will be returned.
-     * If the timeout is exceeded with no results then null will be returned.
-     *
-     * @param predicate
-     *        A function that must return a boolean denoting whether the event meets the given criteria.
-     *
-     * @param timeout
-     *        How long to wait, in milliseconds, for the given event type before expiring.
-     *
-     * @throws java.util.concurrent.TimeoutException
-     */
-    suspend fun <T: Event> waitFor(event: Class<T>, predicate: (T) -> Boolean, timeout: Long): T {
-        val r = commandClient.waitFor(event, predicate, timeout)
-        return r.await()
     }
 
     /**

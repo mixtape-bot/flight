@@ -1,5 +1,7 @@
 package me.devoxin.flight.api
 
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
 import me.devoxin.flight.api.entities.*
 import me.devoxin.flight.api.entities.Invite
 import me.devoxin.flight.internal.arguments.types.Snowflake
@@ -8,7 +10,7 @@ import me.devoxin.flight.internal.arguments.ArgParser
 import me.devoxin.flight.internal.parsers.*
 import net.dv8tion.jda.api.entities.*
 import java.net.URL
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class CommandClientBuilder {
     private var prefixes: List<String> = emptyList()
@@ -18,9 +20,8 @@ class CommandClientBuilder {
     private var prefixProvider: PrefixProvider? = null
     private var cooldownProvider: CooldownProvider? = null
     private var eventListeners: MutableList<CommandEventAdapter> = mutableListOf()
-    private var commandExecutor: ExecutorService? = null
+    private var coroutineDispatcher: CoroutineDispatcher? = null
     private val ownerIds: MutableSet<Long> = mutableSetOf()
-
 
     /**
      * Strings that messages must start with to trigger the bot.
@@ -187,15 +188,15 @@ class CommandClientBuilder {
     }
 
     /**
-     * Sets the thread pool used for executing commands.
+     * Sets the coroutine dispatcher used for executing commands.
      *
-     * @param executorPool
-     *        The pool to use. If null is given, commands will be executed on the WebSocket thread.
+     * @param coroutineDispatcher
+     *        The coroutine dispatcher to use. If null is given, commands will be executed on the WebSocket thread.
      *
      * @return The builder instance, useful for chaining.
      */
-    fun setExecutionThreadPool(executorPool: ExecutorService?): CommandClientBuilder {
-        this.commandExecutor = executorPool
+    fun setCommandDispatcher(executorPool: CoroutineDispatcher?): CommandClientBuilder {
+        this.coroutineDispatcher = executorPool
         return this
     }
 
@@ -208,8 +209,12 @@ class CommandClientBuilder {
     fun build(): CommandClient {
         val prefixProvider = this.prefixProvider ?: DefaultPrefixProvider(prefixes, allowMentionPrefix)
         val cooldownProvider = this.cooldownProvider ?: DefaultCooldownProvider()
+        val coroutineDispatcher = coroutineDispatcher
+            ?: Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
+                .asCoroutineDispatcher()
+
         val commandClient = CommandClient(prefixProvider, cooldownProvider, ignoreBots, eventListeners.toList(),
-            commandExecutor, ownerIds)
+            coroutineDispatcher, ownerIds)
 
         if (helpCommandConfig.enabled) {
             commandClient.commands.register(DefaultHelpCommand(helpCommandConfig.showParameterTypes))

@@ -1,5 +1,8 @@
 package me.devoxin.flight.api
 
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import me.devoxin.flight.api.entities.BucketType
 import me.devoxin.flight.internal.arguments.ArgParser
 import me.devoxin.flight.api.exceptions.BadArgument
@@ -8,13 +11,12 @@ import me.devoxin.flight.api.entities.CooldownProvider
 import me.devoxin.flight.api.hooks.CommandEventAdapter
 import me.devoxin.flight.api.entities.PrefixProvider
 import me.devoxin.flight.internal.entities.CommandRegistry
-import net.dv8tion.jda.api.events.Event
 import net.dv8tion.jda.api.events.GenericEvent
 import net.dv8tion.jda.api.events.ReadyEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.EventListener
 import org.slf4j.LoggerFactory
-import java.util.concurrent.*
+import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KParameter
 
 class CommandClient(
@@ -22,13 +24,15 @@ class CommandClient(
     private val cooldownProvider: CooldownProvider,
     private val ignoreBots: Boolean,
     private val eventListeners: List<CommandEventAdapter>,
-    private val commandExecutor: ExecutorService?,
+    private val coroutineDispatcher: CoroutineDispatcher,
     customOwnerIds: MutableSet<Long>
-) : EventListener {
-    private val waiterScheduler = Executors.newSingleThreadScheduledExecutor()
+) : EventListener, CoroutineScope {
     private val pendingEvents = hashMapOf<Class<*>, HashSet<WaitingEvent<*>>>()
     val commands = CommandRegistry()
     val ownerIds = customOwnerIds
+
+    override val coroutineContext: CoroutineContext
+        get() = coroutineDispatcher + SupervisorJob()
 
     private fun onMessageReceived(event: MessageReceivedEvent) {
         if (ignoreBots && (event.author.isBot || event.isWebhookMessage)) {
@@ -150,7 +154,7 @@ class CommandClient(
             }
         }
 
-        exc.execute(ctx, arguments, cb, commandExecutor)
+        exc.execute(ctx, arguments, cb, coroutineDispatcher)
     }
 
 
@@ -184,29 +188,6 @@ class CommandClient(
 
         events.removeAll(passed)
         passed.forEach { it.accept(event) }
-    }
-
-    inline fun <reified T: Event> waitFor(noinline predicate: (T) -> Boolean, timeout: Long): CompletableFuture<T> {
-        return waitFor(T::class.java, predicate, timeout)
-    }
-
-    fun <T: Event> waitFor(event: Class<T>, predicate: (T) -> Boolean, timeout: Long): CompletableFuture<T> {
-        val future = CompletableFuture<T>()
-        val we = WaitingEvent(event, predicate, future)
-
-        val set = pendingEvents.computeIfAbsent(event) { hashSetOf() }
-        set.add(we)
-
-        if (timeout > 0) {
-            waiterScheduler.schedule({
-                if (!future.isDone) {
-                    future.completeExceptionally(TimeoutException())
-                    set.remove(we)
-                }
-            }, timeout, TimeUnit.MILLISECONDS)
-        }
-
-        return future
     }
 
     private fun dispatchSafely(invoker: (CommandEventAdapter) -> Unit) {
