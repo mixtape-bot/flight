@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 
 plugins {
+  id("maven")
   kotlin("jvm") version Versions.kotlin
 }
 
