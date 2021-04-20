@@ -48,7 +48,6 @@ class CommandRegistry : HashMap<String, CommandFunction>() {
     jar.close()
   }
 
-  @ExperimentalStdlibApi
   fun register(packageName: String) {
     val indexer = Indexer(packageName)
 
@@ -57,7 +56,6 @@ class CommandRegistry : HashMap<String, CommandFunction>() {
     }
   }
 
-  @ExperimentalStdlibApi
   fun register(jarPath: String, packageName: String) {
     val indexer = Indexer(packageName, jarPath)
 
@@ -66,7 +64,6 @@ class CommandRegistry : HashMap<String, CommandFunction>() {
     }
   }
 
-  @ExperimentalStdlibApi
   fun register(cog: Cog, indexer: Indexer? = null) {
     val i = indexer ?: Indexer(cog::class.java.`package`.name)
     val commands = i.getCommands(cog)

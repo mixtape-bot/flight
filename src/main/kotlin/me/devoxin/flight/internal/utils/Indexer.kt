@@ -60,7 +60,6 @@ class Indexer {
       .map { it.getDeclaredConstructor().newInstance() }
   }
 
-  @ExperimentalStdlibApi
   fun getCommands(cog: Cog): List<KFunction<*>> {
     log.debug("Scanning ${cog::class.simpleName} for commands...")
 
@@ -73,7 +72,6 @@ class Indexer {
     return commands.toList()
   }
 
-  @ExperimentalStdlibApi
   fun loadCommand(meth: KFunction<*>, cog: Cog): CommandFunction {
     require(meth.javaMethod!!.declaringClass == cog::class.java) { "${meth.name} is not from ${cog::class.simpleName}" }
     require(meth.hasAnnotation<Command>()) { "${meth.name} is not annotated with Command!" }
@@ -101,7 +99,6 @@ class Indexer {
     return CommandFunction(name, category, properties, cooldown, jar, subcommands, meth, cog, arguments, ctxParam)
   }
 
-  @ExperimentalStdlibApi
   fun getSubCommands(cog: Cog): List<SubCommandFunction> {
     log.debug("Scanning ${cog::class.simpleName} for sub-commands...")
 
@@ -115,14 +112,15 @@ class Indexer {
     return subcommands.toList()
   }
 
-  @ExperimentalStdlibApi
   private fun loadSubCommand(meth: KFunction<*>, cog: Cog): SubCommandFunction {
     require(meth.javaMethod!!.declaringClass == cog::class.java) { "${meth.name} is not from ${cog::class.simpleName}" }
     require(meth.hasAnnotation<SubCommand>()) { "${meth.name} is not annotated with SubCommand!" }
 
     val name = meth.name.toLowerCase()
     val properties = meth.findAnnotation<SubCommand>()!!
-    val ctxParam = meth.valueParameters.firstOrNull { it.type.classifier?.equals(Context::class) == true }
+    val ctxParam = meth.valueParameters.firstOrNull {
+      it.type.classifier?.equals(Context::class) == true
+    }
 
     require(ctxParam != null) { "${meth.name} is missing the Context parameter!" }
 
@@ -133,7 +131,6 @@ class Indexer {
     return SubCommandFunction(name, properties, meth, cog, arguments, ctxParam)
   }
 
-  @ExperimentalStdlibApi
   private fun loadParameters(parameters: List<KParameter>): List<Argument> {
     val arguments = mutableListOf<Argument>()
 
