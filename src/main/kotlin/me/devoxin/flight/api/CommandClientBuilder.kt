@@ -2,9 +2,10 @@ package me.devoxin.flight.api
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.flow.MutableSharedFlow
 import me.devoxin.flight.api.entities.*
 import me.devoxin.flight.api.entities.Invite
-import me.devoxin.flight.api.hooks.CommandEventAdapter
+import me.devoxin.flight.api.events.Event
 import me.devoxin.flight.internal.arguments.ArgParser
 import me.devoxin.flight.internal.arguments.types.Snowflake
 import me.devoxin.flight.internal.parsers.*
@@ -19,9 +20,41 @@ class CommandClientBuilder {
   private var ignoreBots: Boolean = true
   private var prefixProvider: PrefixProvider? = null
   private var cooldownProvider: CooldownProvider? = null
-  private var eventListeners: MutableList<CommandEventAdapter> = mutableListOf()
   private var coroutineDispatcher: CoroutineDispatcher? = null
+  private var inhibitor: Inhibitor = { _, _ -> true }
+  private var eventFlow: MutableSharedFlow<Event>? = null
+  private var doTyping: Boolean = true
   private val ownerIds: MutableSet<Long> = mutableSetOf()
+
+  /**
+   * Whether to send typing events during command execution.
+   *
+   * @return The builder instance. Useful for chaining.
+   */
+  fun setTyping(bool: Boolean): CommandClientBuilder {
+    doTyping = bool
+    return this
+  }
+
+  /**
+   * Determines whether a command should be executed or not.
+   *
+   * @return The builder instance. Useful for chaining.
+   */
+  fun setInhibitor(block: Inhibitor): CommandClientBuilder {
+    inhibitor = block
+    return this
+  }
+
+  /**
+   * Used to emit several different [Event]s
+   *
+   * @return The builder instance. Useful for chaining.
+   */
+  fun setEventFlow(flow: MutableSharedFlow<Event>): CommandClientBuilder {
+    eventFlow = flow
+    return this
+  }
 
   /**
    * Strings that messages must start with to trigger the bot.
@@ -114,16 +147,6 @@ class CommandClientBuilder {
   }
 
   /**
-   * Registers the provided listeners to make use of hooks
-   *
-   * @return The builder instance. Useful for chaining.
-   */
-  fun addEventListeners(vararg listeners: CommandEventAdapter): CommandClientBuilder {
-    this.eventListeners.addAll(listeners)
-    return this
-  }
-
-  /**
    * Registers an argument parser to the given class.
    *
    * @return The builder instance. Useful for chaining.
@@ -205,7 +228,6 @@ class CommandClientBuilder {
    *
    * @return a CommandClient instance
    */
-  @ExperimentalStdlibApi
   fun build(): CommandClient {
     val prefixProvider = this.prefixProvider ?: DefaultPrefixProvider(prefixes, allowMentionPrefix)
     val cooldownProvider = this.cooldownProvider ?: DefaultCooldownProvider()
@@ -213,9 +235,11 @@ class CommandClientBuilder {
       ?: Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
         .asCoroutineDispatcher()
 
+    val eventFlow = eventFlow ?: MutableSharedFlow(extraBufferCapacity = Int.MAX_VALUE)
+
     val commandClient = CommandClient(
-      prefixProvider, cooldownProvider, ignoreBots, eventListeners.toList(),
-      coroutineDispatcher, ownerIds
+      prefixProvider, cooldownProvider, ignoreBots,
+      coroutineDispatcher, eventFlow, doTyping, inhibitor, ownerIds
     )
 
     if (helpCommandConfig.enabled) {

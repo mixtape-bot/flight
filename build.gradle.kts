@@ -18,6 +18,7 @@ dependencies {
   implementation(Dependencies.kotlinStdlib)
   implementation(Dependencies.kotlinReflect)
   implementation(Dependencies.kotlinxCoroutines)
+  implementation(Dependencies.kotlinxCoroutinesJdk8)
 
   compileOnly("org.reflections:reflections:0.9.11")
   api("net.dv8tion:JDA:4.2.1_259")
@@ -51,6 +52,10 @@ tasks.build {
 tasks.withType<KotlinCompile> {
   kotlinOptions {
     jvmTarget = "1.8"
+    freeCompilerArgs = listOf(
+      CompilerArgs.requiresOptIn,
+      CompilerArgs.experimentalStdlibApi
+    )
   }
 }
 

@@ -17,47 +17,27 @@ abstract class Executable(
   val arguments: List<Argument>,
   private val contextParameter: KParameter
 ) {
-
   open fun execute(
     ctx: Context,
     args: HashMap<KParameter, Any?>,
-    complete: (Boolean, Throwable?) -> Unit,
+    complete: ExecutionCallback,
     dispatcher: CoroutineDispatcher
   ) {
     method.instanceParameter?.let { args[it] = cog }
     args[contextParameter] = ctx
 
     ctx.commandClient.launch(ctx.commandClient.coroutineContext) {
-      if (method.isSuspend) {
-        executeAsync(args, complete)
-      } else {
-        executeSync(args, complete)
+      try {
+        if (method.isSuspend) {
+          method.callSuspendBy(args)
+        } else {
+          method.callBy(args)
+        }
+
+        complete(true, null)
+      } catch (ex: Throwable) {
+        complete(false, ex)
       }
     }
   }
-
-  /**
-   * Calls the related method with the given args.
-   */
-  private fun executeSync(args: HashMap<KParameter, Any?>, complete: (Boolean, Throwable?) -> Unit) {
-    try {
-      method.callBy(args)
-      complete(true, null)
-    } catch (e: Throwable) {
-      complete(false, e.cause ?: e)
-    }
-  }
-
-  /**
-   * Calls the related method with the given args, except in an async manner.
-   */
-  private suspend fun executeAsync(args: HashMap<KParameter, Any?>, complete: (Boolean, Throwable?) -> Unit) {
-    try {
-      method.callSuspendBy(args)
-      complete(true, null)
-    } catch (e: Throwable) {
-      complete(false, e.cause ?: e)
-    }
-  }
-
 }
