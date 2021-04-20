@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.io.ByteArrayOutputStream
 
 plugins {
   kotlin("jvm") version Versions.kotlin
@@ -23,26 +24,29 @@ dependencies {
   api("org.slf4j:slf4j-api:1.7.25")
 }
 
-//fun getBuildVersion(): String {
-//    val gitVersion = ByteArrayOutputStream()
-//    exec {
-//      commandLine("git", "rev-parse", "--short", "HEAD")
-//      standardOutput = gitVersion
-//    }
-//
-//    return "$version\n${gitVersion.toString().trim()}"
-//}
+fun getBuildVersion(): String {
+    val gitVersion = ByteArrayOutputStream()
+    exec {
+      commandLine("git", "rev-parse", "--short", "HEAD")
+      standardOutput = gitVersion
+    }
 
-//task writeVersion() {
-//  def resourcePath = sourceSets.main.resources.srcDirs[0]
-//  def resources = file(resourcePath)
-//
-//  if (!resources.exists()) {
-//    resources.mkdirs()
-//  }
-//
-//  file("$resourcePath/flight.txt").text = getBuildVersion()
-//}
+    return "$version\n${gitVersion.toString().trim()}"
+}
+
+tasks.create("writeVersion") {
+  val resourcePath = sourceSets["main"].resources.srcDirs.first()
+  val resources = file(resourcePath)
+  if (!resources.exists()) {
+    resources.mkdirs()
+  }
+
+  file("$resourcePath/flight.txt").writeText(getBuildVersion())
+}
+
+tasks.build {
+  dependsOn("writeVersion")
+}
 
 tasks.withType<KotlinCompile> {
   kotlinOptions {
