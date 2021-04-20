@@ -5,8 +5,8 @@ import java.util.*
 
 class IntParser : Parser<Int> {
 
-    override fun parse(ctx: Context, param: String): Optional<Int> {
-        return Optional.ofNullable(param.toIntOrNull())
-    }
+  override fun parse(ctx: Context, param: String): Optional<Int> {
+    return Optional.ofNullable(param.toIntOrNull())
+  }
 
 }

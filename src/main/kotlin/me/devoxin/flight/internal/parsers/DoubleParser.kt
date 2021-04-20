@@ -5,8 +5,8 @@ import java.util.*
 
 class DoubleParser : Parser<Double> {
 
-    override fun parse(ctx: Context, param: String): Optional<Double> {
-        return Optional.ofNullable(param.toDoubleOrNull())
-    }
+  override fun parse(ctx: Context, param: String): Optional<Double> {
+    return Optional.ofNullable(param.toDoubleOrNull())
+  }
 
 }

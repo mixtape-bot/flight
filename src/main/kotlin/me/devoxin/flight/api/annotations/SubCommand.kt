@@ -11,6 +11,6 @@ package me.devoxin.flight.api.annotations
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
 annotation class SubCommand(
-    val aliases: Array<String> = [],
-    val description: String = "No description available"
+  val aliases: Array<String> = [],
+  val description: String = "No description available"
 )
