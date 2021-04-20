@@ -65,7 +65,7 @@ class CommandClient(
       return
     }
 
-    val args = event.message.contentRaw.take(prefix.length).split(" +".toRegex()).toMutableList()
+    val args = event.message.contentRaw.drop(prefix.length).split(" +".toRegex()).toMutableList()
     val trigger = args.removeFirst().toLowerCase()
 
     val command = commands[trigger]
