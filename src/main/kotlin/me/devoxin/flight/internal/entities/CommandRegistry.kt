@@ -29,36 +29,10 @@ class CommandRegistry : HashMap<String, CommandFunction>() {
   fun unload(cog: Cog) {
     val commands = this.values.filter { it.cog == cog }
     this.values.removeAll(commands)
-
-    val jar = commands.firstOrNull { it.jar != null }?.jar
-      ?: return // No commands loaded from jar, thus no classloader to close.
-
-    val canCloseLoader = this.values.none { it.jar == jar }
-
-    // No other commands were loaded from the jar, so it's safe to close the loader.
-    if (canCloseLoader) {
-      jar.close()
-    }
-  }
-
-  fun unload(jar: Jar) {
-    val commands = this.values.filter { it.jar == jar }
-    this.values.removeAll(commands)
-
-    jar.close()
   }
 
   fun register(packageName: String) {
     val indexer = Indexer(packageName)
-
-    for (cog in indexer.getCogs()) {
-      register(cog, indexer)
-    }
-  }
-
-  fun register(jarPath: String, packageName: String) {
-    val indexer = Indexer(packageName, jarPath)
-
     for (cog in indexer.getCogs()) {
       register(cog, indexer)
     }
