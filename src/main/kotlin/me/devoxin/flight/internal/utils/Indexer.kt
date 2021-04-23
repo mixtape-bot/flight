@@ -80,7 +80,7 @@ class Indexer(private val packageName: String) {
       it.hasAnnotation<Command>()
     }
 
-    if (subcommands.isNotEmpty()) check(cogParentCommands.size != 1) {
+    if (subcommands.isNotEmpty()) check(cogParentCommands.size == 1) {
       "SubCommands are present within ${cog::class.simpleName} however there are multiple top-level commands!"
     }
 
