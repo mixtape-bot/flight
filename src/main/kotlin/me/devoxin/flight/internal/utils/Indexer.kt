@@ -80,8 +80,8 @@ class Indexer(private val packageName: String) {
       it.hasAnnotation<Command>()
     }
 
-    if (subcommands.isNotEmpty()) check(cogParentCommands.size == 1) {
-      "SubCommands are present within ${cog::class.simpleName} however there are multiple top-level commands!"
+    if (subcommands.isNotEmpty() && cogParentCommands.size > 1) {
+      throw IllegalStateException("SubCommands are present within ${cog::class.simpleName} however there are multiple top-level commands!")
     }
 
     return CommandFunction(name, category, properties, cooldown, subcommands, meth, cog, arguments, ctxParam)
