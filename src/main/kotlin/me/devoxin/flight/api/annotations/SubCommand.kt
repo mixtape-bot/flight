@@ -1,5 +1,7 @@
 package me.devoxin.flight.api.annotations
 
+import net.dv8tion.jda.api.Permission
+
 /**
  * Marks a function as subcommand.
  *
@@ -12,5 +14,7 @@ package me.devoxin.flight.api.annotations
 @Target(AnnotationTarget.FUNCTION)
 annotation class SubCommand(
   val aliases: Array<String> = [],
-  val description: String = "No description available"
+  val description: String = "No description available",
+  val botPermissions: Array<Permission> = [],
+  val userPermissions: Array<Permission> = []
 )

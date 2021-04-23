@@ -14,6 +14,7 @@ import me.devoxin.flight.api.exceptions.BadArgument
 import me.devoxin.flight.internal.arguments.ArgParser
 import me.devoxin.flight.internal.entities.CommandRegistry
 import me.devoxin.flight.internal.entities.ExecutionCallback
+import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.events.GenericEvent
 import net.dv8tion.jda.api.events.ReadyEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
@@ -110,16 +111,32 @@ class CommandClient(
 
     if (event.channelType.isGuild) {
       /* check for missing user permissions */
-      if (props.userPermissions.isNotEmpty()) {
-        val missing = props.userPermissions.filterNot { event.member!!.hasPermission(event.textChannel, it) }
+      val userPerms = if (invoked is SubCommandFunction)
+        mergePermissions(invoked.properties.userPermissions, props.userPermissions) else
+        props.userPermissions
+
+      if (userPerms.isNotEmpty()) {
+        val missing = userPerms.filterNot {
+          event.member!!.hasPermission(event.textChannel, it)
+        }
+
         if (missing.isNotEmpty()) {
           return emit(UserMissingPermissionsEvent(ctx, command, missing))
         }
       }
 
       /* check for missing bot permissions */
-      if (props.botPermissions.isNotEmpty()) {
-        val missing = props.botPermissions.filterNot { event.guild.selfMember.hasPermission(event.textChannel, it) }
+      val botPerms = if (invoked is SubCommandFunction)
+        mergePermissions(invoked.properties.botPermissions, props.botPermissions) else
+        props.botPermissions
+
+      // TODO: clean up ^^ and the user permissions
+
+      if (botPerms.isNotEmpty()) {
+        val missing = botPerms.filterNot {
+          event.guild.selfMember.hasPermission(event.textChannel, it)
+        }
+
         if (missing.isNotEmpty()) {
           return emit(MissingPermissionsEvent(ctx, command, missing))
         }
@@ -201,6 +218,14 @@ class CommandClient(
         emit(FlightExceptionEvent(ex))
       }
     }
+  }
+
+  private fun mergePermissions(a: Array<Permission>, b: Array<Permission>): Array<Permission> {
+    val new = arrayListOf<Permission>()
+    new.addAll(a)
+    new.addAll(b)
+
+    return new.toTypedArray() // hmm
   }
 
   private fun onReady(event: ReadyEvent) {
