@@ -6,7 +6,7 @@ package me.devoxin.flight.api.annotations
  * be used as a last resort, or if a different name for the argument is needed.
  */
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.VALUE_PARAMETER)
+@Target(AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.FUNCTION)
 annotation class Name(
   val name: String = ""
 )
