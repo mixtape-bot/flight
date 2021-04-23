@@ -14,7 +14,6 @@ class CommandFunction(
   val category: String,
   val properties: Command,
   val cooldown: Cooldown?,
-  val jar: Jar?,
 
   subCmds: List<SubCommandFunction>,
   // Executable properties
