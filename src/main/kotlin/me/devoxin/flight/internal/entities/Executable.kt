@@ -23,9 +23,11 @@ abstract class Executable(
     complete: ExecutionCallback,
     dispatcher: CoroutineDispatcher
   ) {
-    method.instanceParameter?.let { args[it] = cog }
-    args[contextParameter] = ctx
+    method.instanceParameter?.let {
+      args[it] = cog
+    }
 
+    args[contextParameter] = ctx
     ctx.commandClient.launch(ctx.commandClient.coroutineContext) {
       try {
         if (method.isSuspend) {
