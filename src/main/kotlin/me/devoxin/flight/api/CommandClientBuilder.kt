@@ -16,7 +16,6 @@ import java.util.concurrent.Executors
 class CommandClientBuilder {
   private var prefixes: List<String> = emptyList()
   private var allowMentionPrefix: Boolean = true
-  private var helpCommandConfig: DefaultHelpCommandConfig = DefaultHelpCommandConfig()
   private var ignoreBots: Boolean = true
   private var prefixProvider: PrefixProvider? = null
   private var cooldownProvider: CooldownProvider? = null
@@ -99,16 +98,6 @@ class CommandClientBuilder {
    */
   fun setAllowMentionPrefix(allowMentionPrefix: Boolean): CommandClientBuilder {
     this.allowMentionPrefix = allowMentionPrefix
-    return this
-  }
-
-  /**
-   * Whether the default help command should be used or not.
-   *
-   * @return The builder instance. Useful for chaining.
-   */
-  fun configureDefaultHelpCommand(config: DefaultHelpCommandConfig.() -> Unit): CommandClientBuilder {
-    config(helpCommandConfig)
     return this
   }
 
@@ -241,10 +230,6 @@ class CommandClientBuilder {
       prefixProvider, cooldownProvider, ignoreBots,
       coroutineDispatcher, eventFlow, doTyping, inhibitor, ownerIds
     )
-
-    if (helpCommandConfig.enabled) {
-      commandClient.commands.register(DefaultHelpCommand(helpCommandConfig.showParameterTypes))
-    }
 
     return commandClient
   }
