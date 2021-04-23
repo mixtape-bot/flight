@@ -6,15 +6,11 @@ import me.devoxin.flight.api.SubCommandFunction
 import me.devoxin.flight.api.annotations.*
 import me.devoxin.flight.api.entities.Cog
 import me.devoxin.flight.internal.arguments.Argument
-import me.devoxin.flight.internal.entities.Jar
 import org.reflections.Reflections
 import org.reflections.scanners.MethodParameterNamesScanner
 import org.reflections.scanners.SubTypesScanner
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.lang.reflect.Modifier
-import java.net.URL
-import java.net.URLClassLoader
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.findAnnotation
@@ -84,7 +80,7 @@ class Indexer(private val packageName: String) {
       it.hasAnnotation<Command>()
     }
 
-    check(subcommands.isNotEmpty() && cogParentCommands.size > 1) {
+    if (subcommands.isNotEmpty()) check(cogParentCommands.size != 1) {
       "SubCommands are present within ${cog::class.simpleName} however there are multiple top-level commands!"
     }
 
