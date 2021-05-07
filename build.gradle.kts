@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "gg.mixtape"
-version = "2.2.0"
+version = "3.0.0"
 
 repositories {
   jcenter()
