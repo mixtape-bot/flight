@@ -64,13 +64,13 @@ class CommandClient(
     }
 
     val args = event.message.contentRaw.drop(prefix.length).split(" +".toRegex()).toMutableList()
-    val trigger = args.removeFirst().toLowerCase()
+    val trigger = args.removeFirst().lowercase()
 
     val command = commands[trigger]
       ?: commands.values.firstOrNull { it.properties.aliases.contains(trigger) }
       ?: return emit(UnknownCommandEvent(event, trigger, args))
 
-    val subcommand = args.firstOrNull()?.let { command.subcommands[it.toLowerCase()] }
+    val subcommand = args.firstOrNull()?.let { command.subcommands[it.lowercase()] }
     val invoked = subcommand ?: command
 
     if (subcommand != null) {

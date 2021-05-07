@@ -58,7 +58,11 @@ class Indexer(private val packageName: String) {
     }
 
     val category = cog.name()
-      ?: cog::class.java.`package`.name.split('.').last().replace('_', ' ').toLowerCase().capitalize()
+      ?: cog::class.java.`package`.name.split('.')
+        .last()
+        .replace('_', ' ')
+        .lowercase()
+        .replaceFirstChar { it.uppercase() }
 
     val properties = meth.findAnnotation<Command>()!!
     val cooldown = meth.findAnnotation<Cooldown>()
@@ -103,7 +107,7 @@ class Indexer(private val packageName: String) {
   private fun loadSubCommand(meth: KFunction<*>, cog: Cog): SubCommandFunction {
     /* get the name of this sub-command */
     val name = meth.findAnnotation<Name>()?.name
-      ?: meth.name.toLowerCase()
+      ?: meth.name.lowercase()
 
     /* do some checks */
     check(meth.javaMethod!!.declaringClass == cog::class.java) {
