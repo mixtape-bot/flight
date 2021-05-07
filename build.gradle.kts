@@ -2,7 +2,9 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 
 plugins {
-  id("maven")
+  java
+  idea
+  `maven-publish`
   kotlin("jvm") version Versions.kotlin
 }
 
@@ -52,7 +54,9 @@ tasks.build {
 
 tasks.withType<KotlinCompile> {
   kotlinOptions {
-    jvmTarget = "1.8"
+    jvmTarget = "15"
+    useIR = true
+    incremental = true
     freeCompilerArgs = listOf(
       CompilerArgs.requiresOptIn,
       CompilerArgs.experimentalStdlibApi
@@ -61,6 +65,6 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.withType<Wrapper> {
-    gradleVersion = "6.8"
+    gradleVersion = "7.0"
     distributionType = Wrapper.DistributionType.ALL
 }
