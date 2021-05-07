@@ -12,8 +12,8 @@ group = "gg.mixtape"
 version = "3.0.0"
 
 repositories {
-  jcenter()
   mavenCentral()
+  maven("https://jitpack.io")
   maven("https://m2.dv8tion.net/releases")
 }
 
@@ -23,11 +23,27 @@ dependencies {
   implementation(Dependencies.kotlinxCoroutines)
   implementation(Dependencies.kotlinxCoroutinesJdk8)
 
-  compileOnly("org.reflections:reflections:0.9.11")
-  api("net.dv8tion:JDA:4.2.1_259")
+  compileOnly("org.reflections:reflections:0.9.12")
+  api("net.dv8tion:JDA:4.2.1_262")
   api("org.slf4j:slf4j-api:1.7.25")
 }
 
+/* publishing */
+java {
+  withSourcesJar()
+}
+
+publishing {
+  publications {
+    create<MavenPublication>("maven") {
+      groupId = "com.github.mixtape"
+      artifactId = "flight"
+      version = version
+    }
+  }
+}
+
+/* tasks */
 fun getBuildVersion(): String {
     val gitVersion = ByteArrayOutputStream()
     exec {
@@ -55,7 +71,6 @@ tasks.build {
 tasks.withType<KotlinCompile> {
   kotlinOptions {
     jvmTarget = "15"
-    useIR = true
     incremental = true
     freeCompilerArgs = listOf(
       CompilerArgs.requiresOptIn,
