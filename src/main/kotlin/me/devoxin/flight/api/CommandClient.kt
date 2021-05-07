@@ -1,11 +1,8 @@
 package me.devoxin.flight.api
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.runBlocking
 import me.devoxin.flight.api.entities.BucketType
 import me.devoxin.flight.api.entities.CooldownProvider
 import me.devoxin.flight.api.entities.PrefixProvider
@@ -205,7 +202,7 @@ class CommandClient(
   // | Execution-Related |
   // +-------------------+
   override fun onEvent(event: GenericEvent) {
-    runBlocking(coroutineContext) {
+    launch(coroutineContext) {
       try {
         when (event) {
           is ReadyEvent ->
