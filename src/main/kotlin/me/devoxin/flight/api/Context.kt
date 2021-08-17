@@ -7,26 +7,26 @@ import me.devoxin.flight.internal.utils.Scheduler
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.*
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import java.util.regex.Pattern
 
 class Context(
-    val commandClient: CommandClient,
-    event: MessageReceivedEvent,
+    val flight: Flight,
+    val message: Message,
     val trigger: String,
-    val invokedCommand: Executable
+    val command: Executable,
+    val prefix: String,
+    val args: List<String>
 ) {
-    val jda: JDA = event.jda
-    val message: Message = event.message
+    val jda: JDA = message.jda
 
-    val author: User = event.author
+    val author: User = message.author
 
-    val guild: Guild? = if (event.isFromGuild) event.guild else null
-    val member: Member? = event.member
+    val guild: Guild? = if (message.isFromGuild) message.guild else null
+    val member: Member? = message.member
 
-    val textChannel: TextChannel? = if (event.isFromType(ChannelType.TEXT)) event.textChannel else null
-    val privateChannel: PrivateChannel? = if (event.isFromType(ChannelType.PRIVATE)) event.privateChannel else null
-    val messageChannel: MessageChannel = event.channel
+    val textChannel: TextChannel? = if (message.isFromType(ChannelType.TEXT)) message.textChannel else null
+    val privateChannel: PrivateChannel? = if (message.isFromType(ChannelType.PRIVATE)) message.privateChannel else null
+    val messageChannel: MessageChannel = message.channel
 
 
     /**
@@ -36,7 +36,7 @@ class Context(
      *        The content of the message.
      */
     fun send(content: String) {
-        messageChannel.sendMessage(content).submit()
+        messageChannel.sendMessage(content).queue()
     }
 
     /**
@@ -46,17 +46,21 @@ class Context(
      *        The attachment to send.
      */
     fun send(attachment: Attachment) {
-        messageChannel.sendFile(attachment.stream, attachment.filename).submit()
+        messageChannel.sendFile(attachment.stream, attachment.filename).queue()
     }
 
     /**
      * Sends a message embed to the channel the Context was created from.
      *
-     * @param embed
+     * @param build
      *        Options to apply to the message embed.
      */
-    fun send(embed: EmbedBuilder.() -> Unit) {
-        messageChannel.sendMessage(EmbedBuilder().apply(embed).build()).submit()
+    fun send(build: EmbedBuilder.() -> Unit) {
+        val embed = EmbedBuilder()
+            .apply(build)
+            .build()
+
+        messageChannel.sendMessageEmbeds(embed).queue()
     }
 
     /**
@@ -68,7 +72,9 @@ class Context(
      * @return The created message.
      */
     suspend fun sendAsync(content: String): Message {
-        return messageChannel.sendMessage(content).submit().await()
+        return messageChannel.sendMessage(content)
+            .submit()
+            .await()
     }
 
     /**
@@ -80,19 +86,27 @@ class Context(
      * @return The created message.
      */
     suspend fun sendAsync(attachment: Attachment): Message {
-        return messageChannel.sendFile(attachment.stream, attachment.filename).submit().await()
+        return messageChannel.sendFile(attachment.stream, attachment.filename)
+            .submit()
+            .await()
     }
 
     /**
      * Sends a message embed to the channel the Context was created from.
      *
-     * @param embed
+     * @param build
      *        Options to apply to the message embed.
      *
      * @return The created message.
      */
-    suspend fun sendAsync(embed: EmbedBuilder.() -> Unit): Message {
-        return messageChannel.sendMessage(EmbedBuilder().apply(embed).build()).submit().await()
+    suspend fun sendAsync(build: EmbedBuilder.() -> Unit): Message {
+        val embed = EmbedBuilder()
+            .apply(build)
+            .build()
+
+        return messageChannel.sendMessageEmbeds(embed)
+            .submit()
+            .await()
     }
 
     /**
@@ -120,6 +134,7 @@ class Context(
             val task = Scheduler.every(5000) {
                 messageChannel.sendTyping().queue()
             }
+
             block()
             task.cancel(true)
         }
@@ -133,8 +148,8 @@ class Context(
      */
     suspend fun typingAsync(block: suspend () -> Unit) {
         messageChannel.sendTyping().submit().await()
-        val task = Scheduler.every(5000) { messageChannel.sendTyping().queue() }
 
+        val task = Scheduler.every(5000) { messageChannel.sendTyping().queue() }
         try {
             block()
         } finally {

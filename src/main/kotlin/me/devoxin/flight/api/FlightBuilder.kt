@@ -7,8 +7,8 @@ import me.devoxin.flight.api.entities.*
 import me.devoxin.flight.api.entities.Emoji
 import me.devoxin.flight.api.entities.Invite
 import me.devoxin.flight.api.events.Event
-import me.devoxin.flight.api.ratelimit.RateLimitProvider
-import me.devoxin.flight.api.ratelimit.DefaultRateLimitProvider
+import me.devoxin.flight.api.ratelimit.RateLimitStrategy
+import me.devoxin.flight.api.ratelimit.DefaultRateLimitStrategy
 import me.devoxin.flight.internal.arguments.ArgParser
 import me.devoxin.flight.internal.arguments.types.Snowflake
 import me.devoxin.flight.internal.parsers.*
@@ -16,7 +16,7 @@ import net.dv8tion.jda.api.entities.*
 import java.net.URL
 import java.util.concurrent.Executors
 
-class CommandClientBuilder {
+class FlightBuilder {
     /**
      * Strings that messages must start with to trigger the bot.
      */
@@ -40,7 +40,7 @@ class CommandClientBuilder {
     /**
      * The provider used for rate-limits.
      */
-    var ratelimitProvider: RateLimitProvider? = null
+    var ratelimitProvider: RateLimitStrategy? = null
 
     /**
      * The coroutine dispatcher used for executing commands.
@@ -65,20 +65,20 @@ class CommandClientBuilder {
     /**
      * Whether to send typing events during command execution.
      */
-    var doTyping: Boolean = true
+    var doTyping: Boolean = false
 
     /**
-     * A list of IDs as the owners. Any users with the given IDs
+     * A list of IDs as the developers. Any users with the given IDs
      * are then able to use commands marked with `developerOnly`.
      */
-    val ownerIds: MutableSet<Long> = mutableSetOf()
+    val developers: MutableSet<Long> = mutableSetOf()
 
     /**
      * Registers an argument parser to the given class.
      *
      * @return The builder instance. Useful for chaining.
      */
-    fun parser(klass: Class<*>, parser: Parser<*>): CommandClientBuilder {
+    fun parser(klass: Class<*>, parser: Parser<*>): FlightBuilder {
         // This is kinda unsafe. Would use T, but nullable/boxed types revert
         // to their java.lang counterparts. E.g. Int? becomes java.lang.Integer,
         // but Int remains kotlin.Int.
@@ -95,7 +95,7 @@ class CommandClientBuilder {
      *
      * @return The builder instance. Useful for chaining.
      */
-    fun registerDefaultParsers(): CommandClientBuilder {
+    fun registerDefaultParsers(): FlightBuilder {
         /* Kotlin types and primitives */
         val booleanParser = BooleanParser()
         ArgParser.parsers[Boolean::class.java] = booleanParser
@@ -144,12 +144,12 @@ class CommandClientBuilder {
      *
      * @return a CommandClient instance
      */
-    fun build(): CommandClient {
-        return CommandClient(
-            prefixProvider = prefixProvider
+    fun build(): Flight {
+        val resources = FlightResources(
+            prefixes = prefixProvider
                 ?: DefaultPrefixProvider(prefixes, allowMentionPrefix),
-            ratelimitProvider = ratelimitProvider
-                ?: DefaultRateLimitProvider(),
+            ratelimits = ratelimitProvider
+                ?: DefaultRateLimitStrategy(),
             eventFlow = eventFlow
                 ?: MutableSharedFlow(extraBufferCapacity = Int.MAX_VALUE),
             dispatcher = dispatcher
@@ -157,7 +157,9 @@ class CommandClientBuilder {
             ignoreBots = ignoreBots,
             doTyping = doTyping,
             inhibitor = inhibitor,
-            ownerIds = ownerIds
+            developers = developers
         )
+
+        return Flight(resources)
     }
 }

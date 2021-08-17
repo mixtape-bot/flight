@@ -12,7 +12,7 @@ import me.devoxin.flight.api.Context
  * @param command
  *   The command that was executed.
  *
- * @param failed
- *   Whether execution had failed.
+ * @param failure
+ *   Whether command execution failed. .
  */
-class CommandExecutedEvent(val ctx: Context, val command: CommandFunction, val failed: Boolean) : Event
+class CommandExecutedEvent(val ctx: Context, val command: CommandFunction, val failure: Boolean) : Event

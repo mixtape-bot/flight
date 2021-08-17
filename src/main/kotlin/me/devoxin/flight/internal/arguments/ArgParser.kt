@@ -121,17 +121,20 @@ class ArgParser(
         fun parseArguments(
             cmd: Executable,
             ctx: Context,
-            args: List<String>,
             delimiter: Char
         ): HashMap<KParameter, Any?> {
             if (cmd.arguments.isEmpty()) {
                 return hashMapOf()
             }
 
-            val commandArgs = if (delimiter == ' ') args else args.joinToString(" ").split(delimiter).toMutableList()
-            val parser = ArgParser(ctx, delimiter, commandArgs)
-            val resolvedArgs = hashMapOf<KParameter, Any?>()
+            val args = ctx.args.takeUnless { delimiter == ' ' } ?: ctx.args
+                .joinToString(" ")
+                .split(delimiter)
+                .toMutableList()
 
+            val parser = ArgParser(ctx, delimiter, args)
+
+            val resolvedArgs = hashMapOf<KParameter, Any?>()
             for (arg in cmd.arguments) {
                 val res = parser.parse(arg)
                 val useValue = res != null || (arg.isNullable && !arg.optional) || (arg.isTentative && arg.isNullable)

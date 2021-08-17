@@ -5,7 +5,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
-class DefaultRateLimitProvider : RateLimitProvider {
+class DefaultRateLimitStrategy : RateLimitStrategy {
     private val buckets = ConcurrentHashMap<RateLimitType, Bucket>()
 
     override fun isRateLimited(id: Long, type: RateLimitType, commandName: String): Boolean {

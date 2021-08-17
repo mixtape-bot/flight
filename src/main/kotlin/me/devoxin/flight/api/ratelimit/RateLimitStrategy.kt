@@ -1,6 +1,6 @@
 package me.devoxin.flight.api.ratelimit
 
-interface RateLimitProvider {
+interface RateLimitStrategy {
 
     /**
      * Checks whether the entity associated with the provided ID is on rate-limit.
