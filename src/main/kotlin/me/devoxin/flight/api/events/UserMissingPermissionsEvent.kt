@@ -17,10 +17,11 @@ import net.dv8tion.jda.api.entities.User
  * @param permissions
  *   List of [Permission]s the user lacks.
  */
-class UserMissingPermissionsEvent(val ctx: Context, val command: CommandFunction, val permissions: List<Permission>) : Event {
-  /**
-   * The user that is lacking [permissions].
-   */
-  val user: User
-    get() = ctx.author
+class UserMissingPermissionsEvent(val ctx: Context, val command: CommandFunction, val permissions: List<Permission>) :
+    Event {
+    /**
+     * The user that is lacking [permissions].
+     */
+    val user: User
+        get() = ctx.author
 }

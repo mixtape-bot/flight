@@ -17,13 +17,13 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
  *   Any additional arguments provided by the user.
  */
 class UnknownCommandEvent(
-  val event: MessageReceivedEvent,
-  val command: String,
-  val args: List<String>
+    val event: MessageReceivedEvent,
+    val command: String,
+    val args: List<String>
 ) : Event {
-  /**
-   * The user that tried invoking an unknown command.
-   */
-  val user: User
-    get() = event.author
+    /**
+     * The user that tried invoking an unknown command.
+     */
+    val user: User
+        get() = event.author
 }

@@ -11,35 +11,35 @@ import kotlin.reflect.full.callSuspendBy
 import kotlin.reflect.full.instanceParameter
 
 abstract class Executable(
-  val name: String,
-  val method: KFunction<*>,
-  val cog: Cog,
-  val arguments: List<Argument>,
-  private val contextParameter: KParameter
+    val name: String,
+    val method: KFunction<*>,
+    val cog: Cog,
+    val arguments: List<Argument>,
+    private val contextParameter: KParameter
 ) {
-  open fun execute(
-    ctx: Context,
-    args: HashMap<KParameter, Any?>,
-    complete: ExecutionCallback,
-    dispatcher: CoroutineDispatcher
-  ) {
-    method.instanceParameter?.let {
-      args[it] = cog
-    }
-
-    args[contextParameter] = ctx
-    ctx.commandClient.launch(ctx.commandClient.coroutineContext) {
-      try {
-        if (method.isSuspend) {
-          method.callSuspendBy(args)
-        } else {
-          method.callBy(args)
+    open fun execute(
+        ctx: Context,
+        args: HashMap<KParameter, Any?>,
+        complete: ExecutionCallback,
+        dispatcher: CoroutineDispatcher
+    ) {
+        method.instanceParameter?.let {
+            args[it] = cog
         }
 
-        complete(true, null)
-      } catch (ex: Throwable) {
-        complete(false, ex)
-      }
+        args[contextParameter] = ctx
+        ctx.commandClient.launch(ctx.commandClient.coroutineContext) {
+            try {
+                if (method.isSuspend) {
+                    method.callSuspendBy(args)
+                } else {
+                    method.callBy(args)
+                }
+
+                complete(true, null)
+            } catch (ex: Throwable) {
+                complete(false, ex)
+            }
+        }
     }
-  }
 }

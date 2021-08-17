@@ -20,7 +20,7 @@ import me.devoxin.flight.api.entities.BucketType
  *   ID of the entity that is being rate-limited, or -1 if global rate-limited.
  */
 class CommandRateLimitedEvent(val ctx: Context, val command: CommandFunction, val remaining: Long, val entity: Long) :
-  Event {
-  val type: BucketType
-    get() = command.cooldown!!.bucket
+    Event {
+    val type: BucketType
+        get() = command.cooldown!!.bucket
 }

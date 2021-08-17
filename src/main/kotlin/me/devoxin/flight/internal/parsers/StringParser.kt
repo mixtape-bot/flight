@@ -5,12 +5,12 @@ import java.util.*
 
 class StringParser : Parser<String> {
 
-  override fun parse(ctx: Context, param: String): Optional<String> {
-    if (param.isEmpty() || param.isBlank()) {
-      return Optional.empty()
-    }
+    override fun parse(ctx: Context, param: String): Optional<String> {
+        if (param.isEmpty() || param.isBlank()) {
+            return Optional.empty()
+        }
 
-    return Optional.of(param)
-  }
+        return Optional.of(param)
+    }
 
 }

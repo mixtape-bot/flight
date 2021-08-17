@@ -22,148 +22,148 @@ import kotlin.reflect.jvm.jvmErasure
 
 class Indexer(private val packageName: String) {
 
-  private val reflections: Reflections = Reflections(packageName, MethodParameterNamesScanner(), SubTypesScanner())
+    private val reflections: Reflections = Reflections(packageName, MethodParameterNamesScanner(), SubTypesScanner())
 
-  fun getCogs(): List<Cog> {
-    val cogs = reflections.getSubTypesOf(Cog::class.java)
-    log.debug("Discovered ${cogs.size} cogs in $packageName")
+    fun getCogs(): List<Cog> {
+        val cogs = reflections.getSubTypesOf(Cog::class.java)
+        log.debug("Discovered ${cogs.size} cogs in $packageName")
 
-    return cogs
-      .filter { !Modifier.isAbstract(it.modifiers) && !it.isInterface && Cog::class.java.isAssignableFrom(it) }
-      .map { it.getDeclaredConstructor().newInstance() }
-  }
-
-  fun getCommands(cog: Cog): List<KFunction<*>> {
-    log.debug("Scanning ${cog::class.simpleName} for commands...")
-
-    val cogClass = cog::class
-    val commands = cogClass.members
-      .filterIsInstance<KFunction<*>>()
-      .filter { it.hasAnnotation<Command>() }
-
-    log.debug("Found ${commands.size} commands in cog ${cog::class.simpleName}")
-    return commands.toList()
-  }
-
-  fun loadCommand(meth: KFunction<*>, cog: Cog): CommandFunction {
-    val name = meth.findAnnotation<Name>()?.name
-      ?: meth.name
-
-    check(meth.javaMethod!!.declaringClass == cog::class.java) {
-      "$name is not from ${cog::class.simpleName}"
+        return cogs
+            .filter { !Modifier.isAbstract(it.modifiers) && !it.isInterface && Cog::class.java.isAssignableFrom(it) }
+            .map { it.getDeclaredConstructor().newInstance() }
     }
 
-    require(meth.hasAnnotation<Command>()) {
-      "$name is not annotated with Command!"
+    fun getCommands(cog: Cog): List<KFunction<*>> {
+        log.debug("Scanning ${cog::class.simpleName} for commands...")
+
+        val cogClass = cog::class
+        val commands = cogClass.members
+            .filterIsInstance<KFunction<*>>()
+            .filter { it.hasAnnotation<Command>() }
+
+        log.debug("Found ${commands.size} commands in cog ${cog::class.simpleName}")
+        return commands.toList()
     }
 
-    val category = cog.name()
-      ?: cog::class.java.`package`.name.split('.')
-        .last()
-        .replace('_', ' ')
-        .lowercase()
-        .replaceFirstChar { it.uppercase() }
+    fun loadCommand(meth: KFunction<*>, cog: Cog): CommandFunction {
+        val name = meth.findAnnotation<Name>()?.name
+            ?: meth.name
 
-    val properties = meth.findAnnotation<Command>()!!
-    val cooldown = meth.findAnnotation<Cooldown>()
-    val ctxParam = meth.valueParameters.firstOrNull {
-      it.type.classifier?.equals(Context::class) == true
+        check(meth.javaMethod!!.declaringClass == cog::class.java) {
+            "$name is not from ${cog::class.simpleName}"
+        }
+
+        require(meth.hasAnnotation<Command>()) {
+            "$name is not annotated with Command!"
+        }
+
+        val category = cog.name()
+            ?: cog::class.java.`package`.name.split('.')
+                .last()
+                .replace('_', ' ')
+                .lowercase()
+                .replaceFirstChar { it.uppercase() }
+
+        val properties = meth.findAnnotation<Command>()!!
+        val cooldown = meth.findAnnotation<Cooldown>()
+        val ctxParam = meth.valueParameters.firstOrNull {
+            it.type.classifier?.equals(Context::class) == true
+        }
+
+        require(ctxParam != null) {
+            "${meth.name} is missing the Context parameter!"
+        }
+
+        val parameters = meth.valueParameters.filterNot {
+            it.type.classifier?.equals(Context::class) == true
+        }
+
+        val arguments = loadParameters(parameters)
+        val subcommands = getSubCommands(cog)
+        val cogParentCommands = cog::class.functions.filter {
+            it.hasAnnotation<Command>()
+        }
+
+        if (subcommands.isNotEmpty() && cogParentCommands.size > 1) {
+            throw IllegalStateException("SubCommands are present within ${cog::class.simpleName} however there are multiple top-level commands!")
+        }
+
+        return CommandFunction(name, category, properties, cooldown, subcommands, meth, cog, arguments, ctxParam)
     }
 
-    require(ctxParam != null) {
-      "${meth.name} is missing the Context parameter!"
+    fun getSubCommands(cog: Cog): List<SubCommandFunction> {
+        log.debug("Scanning ${cog::class.simpleName} for sub-commands...")
+
+        val cogClass = cog::class
+        val subcommands = cogClass.members
+            .filterIsInstance<KFunction<*>>()
+            .filter { it.hasAnnotation<SubCommand>() }
+            .map { loadSubCommand(it, cog) }
+
+        log.debug("Found ${subcommands.size} sub-commands in cog ${cogClass.simpleName}")
+        return subcommands.toList()
     }
 
-    val parameters = meth.valueParameters.filterNot {
-      it.type.classifier?.equals(Context::class) == true
+    private fun loadSubCommand(meth: KFunction<*>, cog: Cog): SubCommandFunction {
+        /* get the name of this sub-command */
+        val name = meth.findAnnotation<Name>()?.name
+            ?: meth.name.lowercase()
+
+        /* do some checks */
+        check(meth.javaMethod!!.declaringClass == cog::class.java) {
+            "${meth.name} is not from ${cog::class.simpleName}"
+        }
+
+        require(meth.hasAnnotation<SubCommand>()) {
+            "${meth.name} is not annotated with SubCommand!"
+        }
+
+        /* load properties */
+        val properties = meth.findAnnotation<SubCommand>()!!
+
+        /* find the context parameter. */
+        val ctxParam = meth.valueParameters.firstOrNull {
+            it.type.classifier?.equals(Context::class) == true
+        }
+
+        require(ctxParam != null) {
+            "${meth.name} is missing the Context parameter!"
+        }
+
+        /* find arguments */
+        val parameters = meth.valueParameters.filterNot {
+            it.type.classifier?.equals(Context::class) == true
+        }
+
+        val arguments = loadParameters(parameters)
+
+        /* return sub command function */
+        return SubCommandFunction(name, properties, meth, cog, arguments, ctxParam)
     }
 
-    val arguments = loadParameters(parameters)
-    val subcommands = getSubCommands(cog)
-    val cogParentCommands = cog::class.functions.filter {
-      it.hasAnnotation<Command>()
+    private fun loadParameters(parameters: List<KParameter>): List<Argument> {
+        val arguments = mutableListOf<Argument>()
+
+        for (p in parameters) {
+            val pName = p.findAnnotation<Name>()?.name ?: p.name ?: p.index.toString()
+            val type = p.type.jvmErasure.javaObjectType
+            val isGreedy = p.hasAnnotation<Greedy>()
+            val isOptional = p.isOptional
+            val isNullable = p.type.isMarkedNullable
+            val isTentative = p.hasAnnotation<Tentative>()
+
+            if (isTentative && !(isNullable || isOptional)) {
+                throw IllegalStateException("${p.name} is marked as tentative, but does not have a default value and is not marked nullable!")
+            }
+
+            arguments.add(Argument(pName, type, isGreedy, isOptional, isNullable, isTentative, p))
+        }
+
+        return arguments
     }
 
-    if (subcommands.isNotEmpty() && cogParentCommands.size > 1) {
-      throw IllegalStateException("SubCommands are present within ${cog::class.simpleName} however there are multiple top-level commands!")
+    companion object {
+        private val log = LoggerFactory.getLogger(Indexer::class.java)
     }
-
-    return CommandFunction(name, category, properties, cooldown, subcommands, meth, cog, arguments, ctxParam)
-  }
-
-  fun getSubCommands(cog: Cog): List<SubCommandFunction> {
-    log.debug("Scanning ${cog::class.simpleName} for sub-commands...")
-
-    val cogClass = cog::class
-    val subcommands = cogClass.members
-      .filterIsInstance<KFunction<*>>()
-      .filter { it.hasAnnotation<SubCommand>() }
-      .map { loadSubCommand(it, cog) }
-
-    log.debug("Found ${subcommands.size} sub-commands in cog ${cogClass.simpleName}")
-    return subcommands.toList()
-  }
-
-  private fun loadSubCommand(meth: KFunction<*>, cog: Cog): SubCommandFunction {
-    /* get the name of this sub-command */
-    val name = meth.findAnnotation<Name>()?.name
-      ?: meth.name.lowercase()
-
-    /* do some checks */
-    check(meth.javaMethod!!.declaringClass == cog::class.java) {
-      "${meth.name} is not from ${cog::class.simpleName}"
-    }
-
-    require(meth.hasAnnotation<SubCommand>()) {
-      "${meth.name} is not annotated with SubCommand!"
-    }
-
-    /* load properties */
-    val properties = meth.findAnnotation<SubCommand>()!!
-
-    /* find the context parameter. */
-    val ctxParam = meth.valueParameters.firstOrNull {
-      it.type.classifier?.equals(Context::class) == true
-    }
-
-    require(ctxParam != null) {
-      "${meth.name} is missing the Context parameter!"
-    }
-
-    /* find arguments */
-    val parameters = meth.valueParameters.filterNot {
-      it.type.classifier?.equals(Context::class) == true
-    }
-
-    val arguments = loadParameters(parameters)
-
-    /* return sub command function */
-    return SubCommandFunction(name, properties, meth, cog, arguments, ctxParam)
-  }
-
-  private fun loadParameters(parameters: List<KParameter>): List<Argument> {
-    val arguments = mutableListOf<Argument>()
-
-    for (p in parameters) {
-      val pName = p.findAnnotation<Name>()?.name ?: p.name ?: p.index.toString()
-      val type = p.type.jvmErasure.javaObjectType
-      val isGreedy = p.hasAnnotation<Greedy>()
-      val isOptional = p.isOptional
-      val isNullable = p.type.isMarkedNullable
-      val isTentative = p.hasAnnotation<Tentative>()
-
-      if (isTentative && !(isNullable || isOptional)) {
-        throw IllegalStateException("${p.name} is marked as tentative, but does not have a default value and is not marked nullable!")
-      }
-
-      arguments.add(Argument(pName, type, isGreedy, isOptional, isNullable, isTentative, p))
-    }
-
-    return arguments
-  }
-
-  companion object {
-    private val log = LoggerFactory.getLogger(Indexer::class.java)
-  }
 
 }

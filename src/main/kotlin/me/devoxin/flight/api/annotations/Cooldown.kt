@@ -9,10 +9,10 @@ import java.util.concurrent.TimeUnit
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
 annotation class Cooldown(
-  /** How long the cool-down lasts. */
-  val duration: Long,
-  /** The time unit of the duration. */
-  val timeUnit: TimeUnit = TimeUnit.MILLISECONDS,
-  /** The bucket this cool-down applies to. */
-  val bucket: BucketType
+    /** How long the cool-down lasts. */
+    val duration: Long,
+    /** The time unit of the duration. */
+    val timeUnit: TimeUnit = TimeUnit.MILLISECONDS,
+    /** The bucket this cool-down applies to. */
+    val bucket: BucketType
 )

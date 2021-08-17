@@ -24,11 +24,11 @@ import kotlin.contracts.contract
  */
 @OptIn(ExperimentalContracts::class)
 fun CommandClient(builder: CommandClientBuilder.() -> Unit): CommandClient {
-  contract {
-    callsInPlace(builder, InvocationKind.EXACTLY_ONCE)
-  }
+    contract {
+        callsInPlace(builder, InvocationKind.EXACTLY_ONCE)
+    }
 
-  return CommandClientBuilder().apply(builder).build()
+    return CommandClientBuilder().apply(builder).build()
 }
 
 @PublishedApi
@@ -46,16 +46,16 @@ internal val log = LoggerFactory.getLogger("CommandClient.on")
  * @return A [Job] that can be used to cancel any further processing of [T]
  */
 inline fun <reified T : Event> CommandClient.on(
-  scope: CoroutineScope = this,
-  crossinline consumer: suspend T.() -> Unit
+    scope: CoroutineScope = this,
+    crossinline consumer: suspend T.() -> Unit
 ): Job {
-  return events.buffer(Channel.UNLIMITED).filterIsInstance<T>()
-    .onEach { event ->
-      launch {
-        event
-          .runCatching { event.consumer() }
-          .onFailure { err -> log.error("Error while handling event ${T::class.simpleName}", err) }
-      }
-    }
-    .launchIn(scope)
+    return events.buffer(Channel.UNLIMITED).filterIsInstance<T>()
+        .onEach { event ->
+            launch {
+                event
+                    .runCatching { event.consumer() }
+                    .onFailure { err -> log.error("Error while handling event ${T::class.simpleName}", err) }
+            }
+        }
+        .launchIn(scope)
 }
