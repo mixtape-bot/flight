@@ -28,6 +28,11 @@ dependencies {
     api("org.slf4j:slf4j-api:1.7.25")
 }
 
+java {
+    targetCompatibility = JavaVersion.VERSION_16
+    sourceCompatibility = JavaVersion.VERSION_16
+}
+
 /* publishing */
 val sourcesJar = task<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
@@ -87,7 +92,7 @@ tasks.build {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        jvmTarget = "15"
+        jvmTarget = "16"
         incremental = true
         freeCompilerArgs = listOf(
             CompilerArgs.requiresOptIn,
