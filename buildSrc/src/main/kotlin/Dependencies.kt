@@ -1,6 +1,6 @@
 object Versions {
-  const val kotlin = "1.5.0"
-  const val kotlinxCoroutines = "1.5.0-RC"
+  const val kotlin = "1.5.21"
+  const val kotlinxCoroutines = "1.5.1"
 }
 
 object Dependencies {

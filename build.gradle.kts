@@ -24,7 +24,7 @@ dependencies {
   implementation(Dependencies.kotlinxCoroutinesJdk8)
 
   compileOnly("org.reflections:reflections:0.9.12")
-  api("net.dv8tion:JDA:4.2.1_262")
+  api("net.dv8tion:JDA:4.3.0_309")
   api("org.slf4j:slf4j-api:1.7.25")
 }
 
