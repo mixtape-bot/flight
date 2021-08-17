@@ -29,7 +29,7 @@ dependencies {
 }
 
 /* publishing */
-val sourcesJar = task<Jar>("sourcesJar") {1
+val sourcesJar = task<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
     from(sourceSets["main"].allJava)
 }
@@ -94,9 +94,4 @@ tasks.withType<KotlinCompile> {
             CompilerArgs.experimentalStdlibApi
         )
     }
-}
-
-tasks.withType<Wrapper> {
-    gradleVersion = "7.0"
-    distributionType = Wrapper.DistributionType.ALL
 }
