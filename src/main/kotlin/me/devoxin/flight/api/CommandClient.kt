@@ -27,16 +27,12 @@ class CommandClient(
     private val prefixProvider: PrefixProvider,
     private val cooldownProvider: CooldownProvider,
     private val ignoreBots: Boolean,
-    private val coroutineDispatcher: CoroutineDispatcher,
+    private val dispatcher: CoroutineDispatcher,
     private val eventFlow: MutableSharedFlow<Event>,
     private val doTyping: Boolean,
     val inhibitor: suspend (Context, CommandFunction) -> Boolean,
-    customOwnerIds: MutableSet<Long>
+    val ownerIds: MutableSet<Long>
 ) : EventListener, CoroutineScope {
-    /**
-     * IDs of Users to treat as "Owners"
-     */
-    val ownerIds = customOwnerIds
 
     /**
      * All registered commands.
@@ -50,7 +46,7 @@ class CommandClient(
         get() = eventFlow
 
     override val coroutineContext: CoroutineContext
-        get() = coroutineDispatcher + SupervisorJob()
+        get() = dispatcher + SupervisorJob()
 
     private suspend fun onMessageReceived(event: MessageReceivedEvent) {
         if (ignoreBots && (event.author.isBot || event.isWebhookMessage)) {
@@ -195,7 +191,7 @@ class CommandClient(
         }
 
         val exec = {
-            invoked.execute(ctx, arguments, cb, coroutineDispatcher)
+            invoked.execute(ctx, arguments, cb, dispatcher)
         }
 
         if (doTyping) ctx.typing(exec) else exec()

@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableSharedFlow
 import me.devoxin.flight.api.entities.*
+import me.devoxin.flight.api.entities.Emoji
 import me.devoxin.flight.api.entities.Invite
 import me.devoxin.flight.api.events.Event
 import me.devoxin.flight.internal.arguments.ArgParser
@@ -14,133 +15,68 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 class CommandClientBuilder {
-    private var prefixes: List<String> = emptyList()
-    private var allowMentionPrefix: Boolean = true
-    private var ignoreBots: Boolean = true
-    private var prefixProvider: PrefixProvider? = null
-    private var cooldownProvider: CooldownProvider? = null
-    private var coroutineDispatcher: CoroutineDispatcher? = null
-    private var inhibitor: Inhibitor = { _, _ -> true }
-    private var eventFlow: MutableSharedFlow<Event>? = null
-    private var doTyping: Boolean = true
-    private val ownerIds: MutableSet<Long> = mutableSetOf()
-
-    /**
-     * Whether to send typing events during command execution.
-     *
-     * @return The builder instance. Useful for chaining.
-     */
-    fun setTyping(bool: Boolean): CommandClientBuilder {
-        doTyping = bool
-        return this
-    }
-
-    /**
-     * Determines whether a command should be executed or not.
-     *
-     * @return The builder instance. Useful for chaining.
-     */
-    fun setInhibitor(block: Inhibitor): CommandClientBuilder {
-        inhibitor = block
-        return this
-    }
-
-    /**
-     * Used to emit several different [Event]s
-     *
-     * @return The builder instance. Useful for chaining.
-     */
-    fun setEventFlow(flow: MutableSharedFlow<Event>): CommandClientBuilder {
-        eventFlow = flow
-        return this
-    }
-
     /**
      * Strings that messages must start with to trigger the bot.
-     *
-     * @return The builder instance. Useful for chaining.
      */
-    fun setPrefixes(prefixes: List<String>): CommandClientBuilder {
-        this.prefixes = prefixes
-        return this
-    }
-
-    /**
-     * Strings that messages must start with to trigger the bot.
-     *
-     * @return The builder instance. Useful for chaining.
-     */
-    fun setPrefixes(vararg prefixes: String): CommandClientBuilder {
-        this.prefixes = prefixes.toList()
-        return this
-    }
-
-    /**
-     * Sets the provider used for obtaining prefixes
-     */
-    fun setPrefixProvider(provider: PrefixProvider): CommandClientBuilder {
-        this.prefixProvider = provider
-        return this
-    }
-
-    /**
-     * Sets the provider used for cool-downs.
-     */
-    fun setCooldownProvider(provider: CooldownProvider): CommandClientBuilder {
-        this.cooldownProvider = provider
-        return this
-    }
+    var prefixes: List<String> = emptyList()
 
     /**
      * Whether the bot will allow mentions to be used as a prefix.
-     *
-     * @return The builder instance. Useful for chaining.
      */
-    fun setAllowMentionPrefix(allowMentionPrefix: Boolean): CommandClientBuilder {
-        this.allowMentionPrefix = allowMentionPrefix
-        return this
-    }
+    var allowMentionPrefix: Boolean = true
 
     /**
      * Whether bots and webhooks should be ignored. The recommended option is true to prevent feedback loops.
-     *
-     * @return The builder instance. Useful for chaining.
      */
-    fun setIgnoreBots(ignoreBots: Boolean): CommandClientBuilder {
-        this.ignoreBots = ignoreBots
-        return this
-    }
+    var ignoreBots: Boolean = true
 
     /**
-     * Uses the given list of IDs as the owners. Any users with the given IDs
-     * are then able to use commands marked with `developerOnly`.
-     *
-     * @return The builder instance. Useful for chaining.
+     * The provider used for obtaining prefixes
      */
-    fun setOwnerIds(vararg ids: Long): CommandClientBuilder {
-        this.ownerIds.clear()
-        this.ownerIds.addAll(ids.toTypedArray())
-        return this
-    }
+    var prefixProvider: PrefixProvider? = null
 
     /**
-     * Uses the given list of IDs as the owners. Any users with the given IDs
-     * are then able to use commands marked with `developerOnly`.
-     *
-     * @return The builder instance. Useful for chaining.
+     * The provider used for cool-downs.
      */
-    fun setOwnerIds(vararg ids: String): CommandClientBuilder {
-        this.ownerIds.clear()
-        this.ownerIds.addAll(ids.map(String::toLong))
-        return this
-    }
+    var cooldownProvider: CooldownProvider? = null
+
+    /**
+     * The coroutine dispatcher used for executing commands.
+     */
+    var dispatcher: CoroutineDispatcher? = null
+
+    /**
+     * The number of threads used for the default [dispatcher]
+     */
+    var commandThreads: Int = Runtime.getRuntime().availableProcessors() * 2
+
+    /**
+     * Determines whether a command should be executed or not.
+     */
+    var inhibitor: Inhibitor = { _, _ -> true }
+
+    /**
+     * Used to emit several [Event]s
+     */
+    var eventFlow: MutableSharedFlow<Event>? = null
+
+    /**
+     * Whether to send typing events during command execution.
+     */
+    var doTyping: Boolean = true
+
+    /**
+     * A list of IDs as the owners. Any users with the given IDs
+     * are then able to use commands marked with `developerOnly`.
+     */
+    val ownerIds: MutableSet<Long> = mutableSetOf()
 
     /**
      * Registers an argument parser to the given class.
      *
      * @return The builder instance. Useful for chaining.
      */
-    fun addCustomParser(klass: Class<*>, parser: Parser<*>): CommandClientBuilder {
+    fun parser(klass: Class<*>, parser: Parser<*>): CommandClientBuilder {
         // This is kinda unsafe. Would use T, but nullable/boxed types revert
         // to their java.lang counterparts. E.g. Int? becomes java.lang.Integer,
         // but Int remains kotlin.Int.
@@ -150,7 +86,7 @@ class CommandClientBuilder {
         return this
     }
 
-    inline fun <reified T> addCustomParser(parser: Parser<T>) = addCustomParser(T::class.java, parser)
+    inline fun <reified T> parser(parser: Parser<T>) = parser(T::class.java, parser)
 
     /**
      * Registers all default argument parsers.
@@ -158,7 +94,7 @@ class CommandClientBuilder {
      * @return The builder instance. Useful for chaining.
      */
     fun registerDefaultParsers(): CommandClientBuilder {
-        // Kotlin types and primitives
+        /* Kotlin types and primitives */
         val booleanParser = BooleanParser()
         ArgParser.parsers[Boolean::class.java] = booleanParser
         ArgParser.parsers[java.lang.Boolean::class.java] = booleanParser
@@ -179,7 +115,7 @@ class CommandClientBuilder {
         ArgParser.parsers[Long::class.java] = longParser
         ArgParser.parsers[java.lang.Long::class.java] = longParser
 
-        // JDA entities
+        /* JDA entities */
         val inviteParser = InviteParser()
         ArgParser.parsers[Invite::class.java] = inviteParser
         ArgParser.parsers[net.dv8tion.jda.api.entities.Invite::class.java] = inviteParser
@@ -190,25 +126,14 @@ class CommandClientBuilder {
         ArgParser.parsers[User::class.java] = UserParser()
         ArgParser.parsers[VoiceChannel::class.java] = VoiceChannelParser()
 
-        // Custom entities
+        /* Custom entities */
         ArgParser.parsers[Emoji::class.java] = EmojiParser()
         ArgParser.parsers[String::class.java] = StringParser()
         ArgParser.parsers[Snowflake::class.java] = SnowflakeParser()
+
+        /* java tings */
         ArgParser.parsers[URL::class.java] = UrlParser()
 
-        return this
-    }
-
-    /**
-     * Sets the coroutine dispatcher used for executing commands.
-     *
-     * @param coroutineDispatcher
-     *        The coroutine dispatcher to use. If null is given, commands will be executed on the WebSocket thread.
-     *
-     * @return The builder instance, useful for chaining.
-     */
-    fun setCommandDispatcher(executorPool: CoroutineDispatcher?): CommandClientBuilder {
-        this.coroutineDispatcher = executorPool
         return this
     }
 
@@ -218,19 +143,19 @@ class CommandClientBuilder {
      * @return a CommandClient instance
      */
     fun build(): CommandClient {
-        val prefixProvider = this.prefixProvider ?: DefaultPrefixProvider(prefixes, allowMentionPrefix)
-        val cooldownProvider = this.cooldownProvider ?: DefaultCooldownProvider()
-        val coroutineDispatcher = coroutineDispatcher
-            ?: Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
-                .asCoroutineDispatcher()
-
-        val eventFlow = eventFlow ?: MutableSharedFlow(extraBufferCapacity = Int.MAX_VALUE)
-
-        val commandClient = CommandClient(
-            prefixProvider, cooldownProvider, ignoreBots,
-            coroutineDispatcher, eventFlow, doTyping, inhibitor, ownerIds
+        return CommandClient(
+            prefixProvider = prefixProvider
+                ?: DefaultPrefixProvider(prefixes, allowMentionPrefix),
+            cooldownProvider = cooldownProvider
+                ?: DefaultCooldownProvider(),
+            eventFlow = eventFlow
+                ?: MutableSharedFlow(extraBufferCapacity = Int.MAX_VALUE),
+            dispatcher = dispatcher
+                ?: Executors.newFixedThreadPool(commandThreads).asCoroutineDispatcher(),
+            ignoreBots = ignoreBots,
+            doTyping = doTyping,
+            inhibitor = inhibitor,
+            ownerIds = ownerIds
         )
-
-        return commandClient
     }
 }
