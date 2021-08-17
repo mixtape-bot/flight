@@ -7,6 +7,8 @@ import me.devoxin.flight.api.entities.*
 import me.devoxin.flight.api.entities.Emoji
 import me.devoxin.flight.api.entities.Invite
 import me.devoxin.flight.api.events.Event
+import me.devoxin.flight.api.ratelimit.RateLimitProvider
+import me.devoxin.flight.api.ratelimit.DefaultRateLimitProvider
 import me.devoxin.flight.internal.arguments.ArgParser
 import me.devoxin.flight.internal.arguments.types.Snowflake
 import me.devoxin.flight.internal.parsers.*
@@ -36,9 +38,9 @@ class CommandClientBuilder {
     var prefixProvider: PrefixProvider? = null
 
     /**
-     * The provider used for cool-downs.
+     * The provider used for rate-limits.
      */
-    var cooldownProvider: CooldownProvider? = null
+    var ratelimitProvider: RateLimitProvider? = null
 
     /**
      * The coroutine dispatcher used for executing commands.
@@ -146,8 +148,8 @@ class CommandClientBuilder {
         return CommandClient(
             prefixProvider = prefixProvider
                 ?: DefaultPrefixProvider(prefixes, allowMentionPrefix),
-            cooldownProvider = cooldownProvider
-                ?: DefaultCooldownProvider(),
+            ratelimitProvider = ratelimitProvider
+                ?: DefaultRateLimitProvider(),
             eventFlow = eventFlow
                 ?: MutableSharedFlow(extraBufferCapacity = Int.MAX_VALUE),
             dispatcher = dispatcher

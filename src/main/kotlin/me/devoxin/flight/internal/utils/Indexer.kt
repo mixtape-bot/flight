@@ -65,7 +65,7 @@ class Indexer(private val packageName: String) {
                 .replaceFirstChar { it.uppercase() }
 
         val properties = meth.findAnnotation<Command>()!!
-        val cooldown = meth.findAnnotation<Cooldown>()
+        val rateLimit = meth.findAnnotation<RateLimit>()
         val ctxParam = meth.valueParameters.firstOrNull {
             it.type.classifier?.equals(Context::class) == true
         }
@@ -88,7 +88,7 @@ class Indexer(private val packageName: String) {
             throw IllegalStateException("SubCommands are present within ${cog::class.simpleName} however there are multiple top-level commands!")
         }
 
-        return CommandFunction(name, category, properties, cooldown, subcommands, meth, cog, arguments, ctxParam)
+        return CommandFunction(name, category, properties, rateLimit, subcommands, meth, cog, arguments, ctxParam)
     }
 
     fun getSubCommands(cog: Cog): List<SubCommandFunction> {

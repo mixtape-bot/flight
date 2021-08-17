@@ -6,11 +6,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
-import me.devoxin.flight.api.entities.BucketType
-import me.devoxin.flight.api.entities.CooldownProvider
 import me.devoxin.flight.api.entities.PrefixProvider
 import me.devoxin.flight.api.events.*
 import me.devoxin.flight.api.exceptions.BadArgument
+import me.devoxin.flight.api.ratelimit.RateLimit
+import me.devoxin.flight.api.ratelimit.RateLimitProvider
 import me.devoxin.flight.internal.arguments.ArgParser
 import me.devoxin.flight.internal.entities.CommandRegistry
 import me.devoxin.flight.internal.entities.ExecutionCallback
@@ -25,7 +25,7 @@ import kotlin.reflect.KParameter
 
 class CommandClient(
     private val prefixProvider: PrefixProvider,
-    private val cooldownProvider: CooldownProvider,
+    private val ratelimitProvider: RateLimitProvider,
     private val ignoreBots: Boolean,
     private val dispatcher: CoroutineDispatcher,
     private val eventFlow: MutableSharedFlow<Event>,
@@ -78,16 +78,11 @@ class CommandClient(
 
         val ctx = Context(this, event, prefix, invoked)
 
-        if (command.cooldown != null) {
-            val entityId = when (command.cooldown.bucket) {
-                BucketType.USER -> ctx.author.idLong
-                BucketType.GUILD -> ctx.guild?.idLong
-                BucketType.GLOBAL -> -1
-            }
-
+        if (command.rateLimit != null) {
+            val entityId = RateLimit.getEntityId(command.rateLimit, ctx)
             if (entityId != null) {
-                if (cooldownProvider.isOnCooldown(entityId, command.cooldown.bucket, command)) {
-                    val time = cooldownProvider.getCooldownTime(entityId, command.cooldown.bucket, command)
+                if (ratelimitProvider.isRateLimited(entityId, command.rateLimit.type, command.name)) {
+                    val time = ratelimitProvider.getExpirationDate(entityId, command.rateLimit.type, command.name)
                     return emit(CommandRateLimitedEvent(ctx, command, time, entityId))
                 }
             }
@@ -154,7 +149,7 @@ class CommandClient(
             return
         }
 
-        /* parse events */
+        /* parse arguments */
         val arguments: HashMap<KParameter, Any?>
 
         try {
@@ -177,16 +172,11 @@ class CommandClient(
             emit(CommandExecutedEvent(ctx, command, !success))
         }
 
-        if (command.cooldown != null && command.cooldown.duration > 0) {
-            val entityId = when (command.cooldown.bucket) {
-                BucketType.USER -> ctx.author.idLong
-                BucketType.GUILD -> ctx.guild?.idLong
-                BucketType.GLOBAL -> -1
-            }
-
+        if ((command.rateLimit != null && command.rateLimit.duration > 0) && !ownerIds.contains(ctx.author.idLong)) {
+            val entityId = RateLimit.getEntityId(command.rateLimit, ctx)
             if (entityId != null) {
-                val time = command.cooldown.timeUnit.toMillis(command.cooldown.duration)
-                cooldownProvider.setCooldown(entityId, command.cooldown.bucket, time, command)
+                val duration = command.rateLimit.durationUnit.toMillis(command.rateLimit.duration)
+                ratelimitProvider.putRateLimit(entityId, command.rateLimit.type, duration, command.name)
             }
         }
 
