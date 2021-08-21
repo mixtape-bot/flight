@@ -5,7 +5,8 @@ import me.devoxin.flight.internal.arguments.types.Snowflake
 import java.util.*
 import java.util.regex.Pattern
 
-class SnowflakeParser : Parser<Snowflake> {
+object SnowflakeParser : Parser<Snowflake> {
+    private val snowflakeMatch = Pattern.compile("^(?:<(?:@!?|@&|#)(?<sid>[0-9]{17,21})>|(?<id>[0-9]{17,21}))$")
 
     override suspend fun parse(ctx: Context, param: String): Optional<Snowflake> {
         val match = snowflakeMatch.matcher(param)
@@ -17,9 +18,4 @@ class SnowflakeParser : Parser<Snowflake> {
 
         return Optional.empty()
     }
-
-    companion object {
-        private val snowflakeMatch = Pattern.compile("^(?:<(?:@!?|@&|#)(?<sid>[0-9]{17,21})>|(?<id>[0-9]{17,21}))$")
-    }
-
 }

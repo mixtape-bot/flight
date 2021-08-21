@@ -24,8 +24,4 @@ class UserParser : Parser<User> {
         return Optional.ofNullable(user)
     }
 
-    companion object {
-        val snowflakeParser = SnowflakeParser() // We can reuse this
-    }
-
 }

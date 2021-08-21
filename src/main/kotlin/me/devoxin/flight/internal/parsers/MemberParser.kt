@@ -22,9 +22,4 @@ class MemberParser : Parser<Member> {
 
         return Optional.ofNullable(member)
     }
-
-    companion object {
-        val snowflakeParser = SnowflakeParser() // We can reuse this
-    }
-
 }
