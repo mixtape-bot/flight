@@ -7,8 +7,8 @@ import java.util.*
 class UserParser : Parser<User> {
 
     // TODO: Check ctx.message.mentionedUsers
-    override fun parse(ctx: Context, param: String): Optional<User> {
-        val snowflake = snowflakeParser.parse(ctx, param)
+    override suspend fun parse(ctx: Context, param: String): Optional<User> {
+        val snowflake = SnowflakeParser.parse(ctx, param)
 
         val user = if (snowflake.isPresent) {
             ctx.jda.getUserById(snowflake.get().resolved)

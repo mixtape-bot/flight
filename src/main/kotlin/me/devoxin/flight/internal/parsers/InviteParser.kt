@@ -7,7 +7,7 @@ import java.util.regex.Pattern
 
 class InviteParser : Parser<Invite> {
 
-    override fun parse(ctx: Context, param: String): Optional<Invite> {
+    override suspend fun parse(ctx: Context, param: String): Optional<Invite> {
         val match = INVITE_REGEX.matcher(param)
 
         if (match.find()) {

@@ -7,7 +7,7 @@ import java.util.regex.Pattern
 
 class SnowflakeParser : Parser<Snowflake> {
 
-    override fun parse(ctx: Context, param: String): Optional<Snowflake> {
+    override suspend fun parse(ctx: Context, param: String): Optional<Snowflake> {
         val match = snowflakeMatch.matcher(param)
 
         if (match.matches()) {

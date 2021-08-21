@@ -82,7 +82,7 @@ class ArgParser(
         return Pair(unquoted, original)
     }
 
-    fun parse(arg: Argument): Any? {
+    suspend fun parse(arg: Argument): Any? {
         val parser = parsers[arg.type]
             ?: throw ParserNotRegistered("No parsers registered for `${arg.type}`")
         val (argument, original) = getNextArgument(arg.greedy)
@@ -118,7 +118,7 @@ class ArgParser(
     companion object {
         val parsers = hashMapOf<Class<*>, Parser<*>>()
 
-        fun parseArguments(
+        suspend fun parseArguments(
             cmd: Executable,
             ctx: Context,
             delimiter: Char

@@ -5,9 +5,8 @@ import net.dv8tion.jda.api.entities.TextChannel
 import java.util.*
 
 class TextChannelParser : Parser<TextChannel> {
-
-    override fun parse(ctx: Context, param: String): Optional<TextChannel> {
-        val snowflake = snowflakeParser.parse(ctx, param)
+    override suspend fun parse(ctx: Context, param: String): Optional<TextChannel> {
+        val snowflake = SnowflakeParser.parse(ctx, param)
         val channel: TextChannel? = if (snowflake.isPresent) {
             ctx.guild?.getTextChannelById(snowflake.get().resolved)
         } else {
@@ -16,9 +15,4 @@ class TextChannelParser : Parser<TextChannel> {
 
         return Optional.ofNullable(channel)
     }
-
-    companion object {
-        val snowflakeParser = SnowflakeParser() // We can reuse this
-    }
-
 }

@@ -5,7 +5,7 @@ import java.util.*
 
 class BooleanParser : Parser<Boolean> {
 
-    override fun parse(ctx: Context, param: String): Optional<Boolean> {
+    override suspend fun parse(ctx: Context, param: String): Optional<Boolean> {
         if (trueExpr.contains(param)) {
             return Optional.of(true)
         } else if (falseExpr.contains(param)) {
