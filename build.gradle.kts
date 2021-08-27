@@ -2,14 +2,12 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 
 plugins {
-    java
-    idea
     `maven-publish`
     kotlin("jvm") version Versions.kotlin
 }
 
 group = "gg.mixtape"
-version = "2.1.5"
+version = "2.1.7"
 
 repositories {
     mavenCentral()
@@ -22,15 +20,14 @@ dependencies {
     implementation(Dependencies.kotlinReflect)
     implementation(Dependencies.kotlinxCoroutines)
     implementation(Dependencies.kotlinxCoroutinesJdk8)
+    implementation("org.reflections:reflections:0.9.12")
 
-    compileOnly("org.reflections:reflections:0.9.12")
-    api("net.dv8tion:JDA:4.3.0_309")
-    api("org.slf4j:slf4j-api:1.7.25")
-}
+    api("net.dv8tion:JDA:4.3.0_310") {
+        exclude(group = "club.minnced", module = "opus-java")
+    }
+    api("org.slf4j:slf4j-api:1.7.32")
 
-java {
-    targetCompatibility = JavaVersion.VERSION_16
-    sourceCompatibility = JavaVersion.VERSION_16
+    testImplementation("ch.qos.logback:logback-classic:1.2.5")
 }
 
 /* publishing */
@@ -91,6 +88,8 @@ tasks.build {
 }
 
 tasks.withType<KotlinCompile> {
+    sourceCompatibility = "16"
+    targetCompatibility = "16"
     kotlinOptions {
         jvmTarget = "16"
         incremental = true

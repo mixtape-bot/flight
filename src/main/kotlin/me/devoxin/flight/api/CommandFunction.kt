@@ -1,6 +1,8 @@
 package me.devoxin.flight.api
 
 import me.devoxin.flight.api.annotations.Command
+import me.devoxin.flight.api.annotations.Greedy
+import me.devoxin.flight.api.annotations.GreedyType
 import me.devoxin.flight.api.annotations.RateLimit
 import me.devoxin.flight.api.entities.Cog
 import me.devoxin.flight.internal.arguments.Argument

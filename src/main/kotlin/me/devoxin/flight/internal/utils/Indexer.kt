@@ -13,12 +13,10 @@ import org.slf4j.LoggerFactory
 import java.lang.reflect.Modifier
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.functions
-import kotlin.reflect.full.hasAnnotation
-import kotlin.reflect.full.valueParameters
+import kotlin.reflect.full.*
 import kotlin.reflect.jvm.javaMethod
 import kotlin.reflect.jvm.jvmErasure
+import kotlin.reflect.typeOf
 
 class Indexer(private val packageName: String) {
 
@@ -146,17 +144,24 @@ class Indexer(private val packageName: String) {
 
         for (p in parameters) {
             val pName = p.findAnnotation<Name>()?.name ?: p.name ?: p.index.toString()
-            val type = p.type.jvmErasure.javaObjectType
-            val isGreedy = p.hasAnnotation<Greedy>()
+            var type = p.type.jvmErasure.javaObjectType
+            var greedy = p.findAnnotation<Greedy>()?.let { GreedyInfo(it.type, it.min..it.max) }
             val isOptional = p.isOptional
             val isNullable = p.type.isMarkedNullable
             val isTentative = p.hasAnnotation<Tentative>()
+
+            if (p.type.jvmErasure.isSubclassOf(Collection::class)) {
+                type = p.type.arguments.first().type!!.jvmErasure.javaObjectType
+                greedy = GreedyInfo(GreedyType.Regular, greedy?.range ?: 1..Int.MAX_VALUE)
+            } else if (greedy != null) {
+                greedy = GreedyInfo(GreedyType.Computed, greedy.range)
+            }
 
             if (isTentative && !(isNullable || isOptional)) {
                 throw IllegalStateException("${p.name} is marked as tentative, but does not have a default value and is not marked nullable!")
             }
 
-            arguments.add(Argument(pName, type, isGreedy, isOptional, isNullable, isTentative, p))
+            arguments.add(Argument(pName, type, greedy, isOptional, isNullable, isTentative, p))
         }
 
         return arguments

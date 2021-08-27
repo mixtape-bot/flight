@@ -1,6 +1,7 @@
 package me.devoxin.flight.internal.arguments
 
 import me.devoxin.flight.api.Context
+import me.devoxin.flight.api.annotations.GreedyType
 import me.devoxin.flight.api.exceptions.BadArgument
 import me.devoxin.flight.api.exceptions.ParserNotRegistered
 import me.devoxin.flight.internal.entities.Executable
@@ -53,7 +54,7 @@ class ArgParser(
             iterator.forEachRemaining { this.append(it) }
         }
         args = remainingArgs.toString().split(delimiter).toMutableList()
-        return Pair(argument.toString(), original.split(delimiterStr))
+        return argument.toString() to original.split(delimiterStr)
     }
 
     /**
@@ -61,58 +62,106 @@ class ArgParser(
      */
     private fun getNextArgument(greedy: Boolean): Pair<String, List<String>> {
         val (argument, original) = when {
-            args.isEmpty() -> Pair("", emptyList())
+            args.isEmpty() -> "" to emptyList()
             greedy -> {
                 val args = take(args.size)
-                Pair(args.joinToString(delimiterStr), args)
+                args.joinToString(delimiterStr) to args
             }
             args[0].startsWith('"') && delimiter == ' ' -> parseQuoted() // accept other quote chars
             else -> {
                 val taken = take(1)
-                Pair(taken.joinToString(delimiterStr), taken)
+                taken.joinToString(delimiterStr) to taken
             }
         }
 
         var unquoted = argument.trim()
-
         if (!greedy) {
             unquoted = unquoted.removeSurrounding("\"")
         }
 
-        return Pair(unquoted, original)
+        return unquoted to original
     }
 
     suspend fun parse(arg: Argument): Any? {
         val parser = parsers[arg.type]
             ?: throw ParserNotRegistered("No parsers registered for `${arg.type}`")
-        val (argument, original) = getNextArgument(arg.greedy)
-        val result = if (argument.isEmpty()) {
-            Optional.empty()
-        } else {
-            try {
-                parser.parse(ctx, argument)
-            } catch (e: Exception) {
-                throw BadArgument(arg, argument, e)
+
+        println(arg.greedy)
+
+        var result: Any? = null
+        if (arg.greedy != null) {
+            when (arg.greedy.type) {
+                GreedyType.Regular -> {
+                    val resolved = mutableListOf<Any?>()
+                    val took = mutableListOf<String>()
+                    while (args.isNotEmpty()) {
+                        val (argument, original) = getNextArgument(false)
+                        val parsed = if (argument.isEmpty()) Optional.empty() else argument
+                            .runCatching { parser.parse(ctx, argument) }
+                            .getOrElse { throw BadArgument(arg, argument, it) }
+
+                        if (!parsed.isPresent) {
+                            if (arg.isTentative) {
+                                restore(original)
+                            }
+
+                            break
+                        }
+
+                        took.add(original.joinToString(delimiterStr))
+                        resolved.add(parsed.orElse(null))
+                    }
+
+                    val canSubstitute = arg.isNullable || arg.optional
+                    if (!canSubstitute && resolved.size !in arg.greedy.range) {
+                        val argument = took.joinToString(delimiterStr)
+                        throw BadArgument(arg, argument, IllegalArgumentException("Not enough arguments"))
+                    }
+
+                    result = if (arg.isNullable && resolved.isEmpty()) null else resolved
+                }
+
+                GreedyType.Computed -> {
+                    val (argument, original) = getNextArgument(true)
+                    val resolved = (if (argument.isEmpty()) Optional.empty() else argument
+                        .runCatching { parser.parse(ctx, argument) }
+                        .getOrElse { throw BadArgument(arg, argument, it) })
+                        .orElse(null)
+
+                    result = parse(arg, argument to original, resolved)
+                }
             }
+        } else {
+            val (argument, original) = getNextArgument(false)
+            val resolved = (if (argument.isEmpty()) Optional.empty() else argument
+                .runCatching { parser.parse(ctx, argument) }
+                .getOrElse { throw BadArgument(arg, argument, it) })
+                .orElse(null)
+
+            result = parse(arg, argument to original, resolved)
         }
 
-        val canSubstitute = arg.isTentative || arg.isNullable || (arg.optional && argument.isEmpty())
+        return result
+    }
 
-        if (!result.isPresent && !canSubstitute) { // canSubstitute -> Whether we can pass null or the default value.
+    private fun parse(arg: Argument, argument: Pair<String, List<String>>, value: Any?): Any? {
+        val canSubstitute = arg.isTentative || arg.isNullable || (arg.optional && argument.first.isEmpty())
+        if (value == null && !canSubstitute) {
+            // canSubstitute -> Whether we can pass null or the default value.
             // This should throw if the result is not present, and one of the following is not true:
             // - The arg is marked tentative (isTentative)
             // - The arg can use null (isNullable)
             // - The arg has a default (isOptional) and no value was specified for it (argument.isEmpty())
 
             //!arg.isNullable && (!arg.optional || argument.isNotEmpty())) {
-            throw BadArgument(arg, argument)
+            throw BadArgument(arg, argument.first)
         }
 
-        if (!result.isPresent && arg.isTentative) {
-            restore(original)
+        if (value == null && arg.isTentative) {
+            restore(argument.second)
         }
 
-        return result.orElse(null)
+        return value
     }
 
     companion object {

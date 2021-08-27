@@ -131,7 +131,7 @@ class FlightBuilder {
         /* Custom entities */
         ArgParser.parsers[Emoji::class.java] = EmojiParser()
         ArgParser.parsers[String::class.java] = StringParser()
-        ArgParser.parsers[Snowflake::class.java] = SnowflakeParser()
+        ArgParser.parsers[Snowflake::class.java] = SnowflakeParser
 
         /* java tings */
         ArgParser.parsers[URL::class.java] = UrlParser()

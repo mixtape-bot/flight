@@ -21,4 +21,8 @@ package me.devoxin.flight.api.annotations
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.VALUE_PARAMETER)
-annotation class Greedy
+annotation class Greedy(val type: GreedyType = GreedyType.Regular, val min: Int = 1, val max: Int = Int.MAX_VALUE)
+
+data class GreedyInfo(val type: GreedyType, val range: IntRange)
+enum class GreedyType { Computed, Regular }
+

@@ -1,11 +1,12 @@
 package me.devoxin.flight.internal.arguments
 
+import me.devoxin.flight.api.annotations.GreedyInfo
 import kotlin.reflect.KParameter
 
 class Argument(
     val name: String,
     val type: Class<*>,
-    val greedy: Boolean,
+    val greedy: GreedyInfo?,
     val optional: Boolean, // Denotes that a parameter has a default value.
     val isNullable: Boolean,
     val isTentative: Boolean,
@@ -20,6 +21,9 @@ class Argument(
                 append('<')
             }
 
+            if (greedy != null) {
+                append("...")
+            }
             append(name)
 
             if (withType) {
