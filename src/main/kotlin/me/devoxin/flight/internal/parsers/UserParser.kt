@@ -5,7 +5,7 @@ import me.devoxin.flight.api.Context
 import net.dv8tion.jda.api.entities.User
 import java.util.*
 
-class UserParser : Parser<User> {
+object UserParser : Parser<User> {
     // TODO: Check ctx.message.mentionedUsers
     override suspend fun parse(ctx: Context, param: String): Optional<User> {
         val snowflake = SnowflakeParser.parse(ctx, param)

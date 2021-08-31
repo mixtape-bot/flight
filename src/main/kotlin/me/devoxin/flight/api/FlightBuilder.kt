@@ -10,6 +10,7 @@ import me.devoxin.flight.api.events.Event
 import me.devoxin.flight.api.ratelimit.RateLimitStrategy
 import me.devoxin.flight.api.ratelimit.DefaultRateLimitStrategy
 import me.devoxin.flight.internal.arguments.ArgParser
+import me.devoxin.flight.internal.arguments.types.Mentionable
 import me.devoxin.flight.internal.arguments.types.Snowflake
 import me.devoxin.flight.internal.parsers.*
 import net.dv8tion.jda.api.entities.*
@@ -122,16 +123,17 @@ class FlightBuilder {
         ArgParser.parsers[Invite::class.java] = inviteParser
         ArgParser.parsers[net.dv8tion.jda.api.entities.Invite::class.java] = inviteParser
 
-        ArgParser.parsers[Member::class.java] = MemberParser()
-        ArgParser.parsers[Role::class.java] = RoleParser()
+        ArgParser.parsers[Member::class.java] = MemberParser
+        ArgParser.parsers[Role::class.java] = RoleParser
         ArgParser.parsers[TextChannel::class.java] = TextChannelParser()
-        ArgParser.parsers[User::class.java] = UserParser()
+        ArgParser.parsers[User::class.java] = UserParser
         ArgParser.parsers[VoiceChannel::class.java] = VoiceChannelParser()
 
         /* Custom entities */
         ArgParser.parsers[Emoji::class.java] = EmojiParser()
         ArgParser.parsers[String::class.java] = StringParser()
         ArgParser.parsers[Snowflake::class.java] = SnowflakeParser
+        ArgParser.parsers[Mentionable::class.java] = MentionableParser()
 
         /* java tings */
         ArgParser.parsers[URL::class.java] = UrlParser()

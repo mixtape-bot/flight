@@ -23,7 +23,6 @@ class CommandFunction(
     arguments: List<Argument>,
     contextParameter: KParameter
 ) : Executable(name, method, cog, arguments, contextParameter) {
-
     val subcommands = hashMapOf<String, SubCommandFunction>()
 
     init {
@@ -39,5 +38,4 @@ class CommandFunction(
             }
         }
     }
-
 }

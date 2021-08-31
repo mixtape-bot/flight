@@ -86,8 +86,6 @@ class ArgParser(
         val parser = parsers[arg.type]
             ?: throw ParserNotRegistered("No parsers registered for `${arg.type}`")
 
-        println(arg.greedy)
-
         var result: Any? = null
         if (arg.greedy != null) {
             when (arg.greedy.type) {

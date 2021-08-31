@@ -193,7 +193,7 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
     // | Execution-Related |
     // +-------------------+
     override fun onEvent(event: GenericEvent) {
-        launch(coroutineContext) {
+        launch {
             try {
                 when (event) {
                     is ReadyEvent ->

@@ -4,7 +4,7 @@ import me.devoxin.flight.api.Context
 import net.dv8tion.jda.api.entities.Role
 import java.util.*
 
-class RoleParser : Parser<Role> {
+object RoleParser : Parser<Role> {
     override suspend fun parse(ctx: Context, param: String): Optional<Role> {
         val snowflake = SnowflakeParser.parse(ctx, param)
         val role: Role? = if (snowflake.isPresent) {
