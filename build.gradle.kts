@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "gg.mixtape"
-version = "2.1.7"
+version = "2.1.10"
 
 repositories {
     mavenCentral()
@@ -22,18 +22,16 @@ dependencies {
     implementation(Dependencies.kotlinxCoroutinesJdk8)
     implementation("org.reflections:reflections:0.9.12")
 
-    api("net.dv8tion:JDA:4.3.0_310") {
-        exclude(group = "club.minnced", module = "opus-java")
-    }
+    api("net.dv8tion:JDA:4.3.0_313")
     api("org.slf4j:slf4j-api:1.7.32")
 
     testImplementation("ch.qos.logback:logback-classic:1.2.5")
 }
 
 /* publishing */
-val sourcesJar = task<Jar>("sourcesJar") {
+val sourcesJar by tasks.registering(Jar::class) {
     archiveClassifier.set("sources")
-    from(sourceSets["main"].allJava)
+    from(sourceSets["main"].allSource)
 }
 
 publishing {
