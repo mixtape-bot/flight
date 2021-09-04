@@ -12,4 +12,4 @@ import me.devoxin.flight.api.Context
  * @param command
  *   The command being executed.
  */
-class CommandInvokedEvent(val ctx: Context, val command: CommandFunction) : Event
+data class CommandInvokedEvent(val ctx: Context, val command: CommandFunction) : Event

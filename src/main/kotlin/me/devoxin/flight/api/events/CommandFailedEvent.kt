@@ -15,4 +15,4 @@ import me.devoxin.flight.api.Context
  * @param error
  *   The error encountered
  */
-class CommandFailedEvent(val ctx: Context, val command: CommandFunction, val error: Throwable) : Event
+data class CommandFailedEvent(val ctx: Context, val command: CommandFunction, val error: Throwable) : Event

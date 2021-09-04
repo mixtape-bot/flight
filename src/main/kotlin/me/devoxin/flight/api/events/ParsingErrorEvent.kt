@@ -6,7 +6,7 @@ import me.devoxin.flight.api.Context
 /**
  * Emitted when the argument parser encounters an error.
  */
-class ParsingErrorEvent(
+data class ParsingErrorEvent(
     val ctx: Context,
     val command: CommandFunction,
     val error: Throwable

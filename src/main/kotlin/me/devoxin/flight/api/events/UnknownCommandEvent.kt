@@ -17,7 +17,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
  * @param args
  *   Any additional arguments provided by the user.
  */
-class UnknownCommandEvent(
+data class UnknownCommandEvent(
     val message: Message,
     val command: String,
     val args: List<String>
