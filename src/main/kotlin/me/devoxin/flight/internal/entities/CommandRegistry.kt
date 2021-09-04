@@ -7,7 +7,7 @@ import me.devoxin.flight.internal.utils.Indexer
 class CommandRegistry : HashMap<String, CommandFunction>() {
 
     fun findCommandByName(name: String): CommandFunction? {
-        return this[name]
+        return this.get(name)
     }
 
     fun findCommandByAlias(alias: String): CommandFunction? {

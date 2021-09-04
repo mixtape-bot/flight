@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "gg.mixtape"
-version = "2.1.10"
+version = "2.1.11"
 
 repositories {
     mavenCentral()
