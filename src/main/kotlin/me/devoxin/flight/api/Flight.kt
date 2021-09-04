@@ -165,13 +165,25 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         }
 
         /* get the supplied arguments. */
-        val args = message.contentRaw.drop(prefix.length).split(" +".toRegex()).toMutableList()
+        val content = message.contentRaw.drop(prefix.length)
+
+        /* find the command trigger. */
+        val trigger = commands.values.firstNotNullOf { command ->
+            val triggers = listOf(command.name, *command.properties.aliases)
+            val pattern = """(?i)^(${triggers.joinToString("|")}).*$""".toPattern()
+            pattern.matcher(content).takeIf { it.find() }?.group(1)
+        }
+
+        /* get the remaining arguments. */
+        val args = content
+            .drop(trigger.length)
+            .trim()
+            .split(" +".toRegex())
+            .toMutableList()
 
         /* find the root command. */
-        val trigger = args.removeFirst().lowercase()
-
         val command = commands[trigger]
-            ?: commands.values.firstOrNull { it.properties.aliases.contains(trigger) }
+            ?: commands.findCommandByAlias(trigger)
             ?: return emit(UnknownCommandEvent(message, trigger, args))
 
         /* find a sub command. */
