@@ -170,7 +170,7 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         /* find the command trigger. */
         val trigger = commands.values.firstNotNullOf { command ->
             val triggers = listOf(command.name, *command.properties.aliases)
-            val pattern = """(?i)^(${triggers.joinToString("|")})($|\s.+$)""".toPattern()
+            val pattern = """(?i)^(${triggers.joinToString("|") { "\\Q$it\\E" }})($|\s.+$)""".toPattern()
             pattern.matcher(content).takeIf { it.find() }?.group(1)
         }.lowercase()
 
