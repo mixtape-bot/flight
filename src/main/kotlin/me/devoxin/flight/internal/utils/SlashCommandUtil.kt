@@ -2,6 +2,7 @@ package me.devoxin.flight.internal.utils
 
 import me.devoxin.flight.annotation.FlightPreview
 import me.devoxin.flight.api.annotations.Name
+import me.devoxin.flight.api.command.Context
 import me.devoxin.flight.api.command.slash.SlashCommandFunction
 import me.devoxin.flight.api.command.slash.SlashContext
 import me.devoxin.flight.api.command.slash.SlashSubCommandFunction
@@ -95,7 +96,7 @@ object SlashCommandUtil {
 
         /* find the slash context parameter. */
         val ctxParam = meth.valueParameters.firstOrNull {
-            it.type.classifier?.equals(SlashContext::class) == true
+            it.type.classifier?.equals(Context::class) == true
         }
 
         require(ctxParam != null) {
@@ -104,7 +105,7 @@ object SlashCommandUtil {
 
         /* find arguments */
         val parameters = meth.valueParameters.filterNot {
-            it.type.classifier?.equals(SlashContext::class) == true
+            it.type.classifier?.equals(Context::class) == true
         }
 
         val arguments = getArguments(parameters)

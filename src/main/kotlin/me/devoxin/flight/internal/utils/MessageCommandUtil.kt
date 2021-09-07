@@ -2,6 +2,7 @@ package me.devoxin.flight.internal.utils
 
 import me.devoxin.flight.api.annotations.Name
 import me.devoxin.flight.api.annotations.RateLimit
+import me.devoxin.flight.api.command.Context
 import me.devoxin.flight.api.command.message.MessageCommandFunction
 import me.devoxin.flight.api.command.message.MessageContext
 import me.devoxin.flight.api.command.message.MessageSubCommandFunction
@@ -40,7 +41,7 @@ object MessageCommandUtil {
         val properties = meth.findAnnotation<MessageCommand>()!!
         val rateLimit = meth.findAnnotation<RateLimit>()
         val ctxParam = meth.valueParameters.firstOrNull {
-            it.type.classifier?.equals(MessageContext::class) == true
+            it.type.classifier?.equals(Context::class) == true
         }
 
         require(ctxParam != null) {
@@ -48,7 +49,7 @@ object MessageCommandUtil {
         }
 
         val parameters = meth.valueParameters.filterNot {
-            it.type.classifier?.equals(MessageContext::class) == true
+            it.type.classifier?.equals(Context::class) == true
         }
 
         val arguments = loadParameters(parameters)
@@ -106,7 +107,7 @@ object MessageCommandUtil {
 
         /* find the message context parameter. */
         val ctxParam = meth.valueParameters.firstOrNull {
-            it.type.classifier?.equals(MessageContext::class) == true
+            it.type.classifier?.equals(Context::class) == true
         }
 
         require(ctxParam != null) {
@@ -115,7 +116,7 @@ object MessageCommandUtil {
 
         /* find arguments */
         val parameters = meth.valueParameters.filterNot {
-            it.type.classifier?.equals(MessageContext::class) == true
+            it.type.classifier?.equals(Context::class) == true
         }
 
         val arguments = loadParameters(parameters)
