@@ -17,9 +17,6 @@ import net.dv8tion.jda.api.Permission
 annotation class SlashSubCommand(
     val description: String = "No description available.",
     /* useful things that will make this actually usable. */
-    val developerOnly: Boolean = false,
-    val guildOnly: Boolean = false,
-    val nsfwOnly: Boolean = false,
     val userPermissions: Array<Permission> = [],
     val botPermissions: Array<Permission> = []
 )

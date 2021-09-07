@@ -17,7 +17,7 @@ class CommandArgument(
     internal val kparam: KParameter
 ) {
     val isRequired: Boolean
-        get() = !isNullable || !optional
+        get() = !isNullable && !optional
 
     val resolver: Resolver<*>?
         get() = ArgParser.parsers[type]

@@ -7,9 +7,9 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.invoke
 import kotlinx.coroutines.launch
 import me.devoxin.flight.annotation.FlightPreview
-import me.devoxin.flight.api.command.Context
 import me.devoxin.flight.api.command.message.MessageCommandFunction
 import me.devoxin.flight.api.command.message.MessageContext
+import me.devoxin.flight.api.command.message.MessageSubCommandFunction
 import me.devoxin.flight.api.command.slash.SlashContext
 import me.devoxin.flight.api.command.slash.SlashSubCommandFunction
 import me.devoxin.flight.api.command.slash.annotations.Privilege
@@ -83,8 +83,49 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         }
 
         /* do some checks. */
-        if (!runCommandChecks(ctx, commandFunction)) {
-            return
+        if (commandFunction.properties.developerOnly && !resources.developers.contains(ctx.author.idLong)) {
+            return emit(BadEnvironmentEvent(ctx, commandFunction, BadEnvironmentEvent.Reason.NonDeveloper))
+        }
+
+        if (ctx.channel !is GuildChannel && commandFunction.properties.guildOnly) {
+            return emit(BadEnvironmentEvent(ctx, commandFunction, BadEnvironmentEvent.Reason.NonGuild))
+        }
+
+        if (ctx.channel is GuildChannel) {
+            /* check for missing user permissions */
+            val userPerms = if (ctx.command is MessageSubCommandFunction)
+                arrayOf(*ctx.command.userPermissions, *commandFunction.userPermissions) else
+                commandFunction.userPermissions
+
+            if (userPerms.isNotEmpty()) {
+                val missing = userPerms.filterNot {
+                    ctx.member!!.hasPermission(ctx.textChannel!!, it)
+                }
+
+                if (missing.isNotEmpty()) {
+                    return emit(UserMissingPermissionsEvent(ctx, commandFunction, missing))
+                }
+            }
+
+            /* check for missing bot permissions */
+            val botPerms = if (ctx.command is MessageSubCommandFunction)
+                arrayOf(*ctx.command.botPermissions, *commandFunction.botPermissions) else
+                commandFunction.botPermissions
+
+            if (botPerms.isNotEmpty()) {
+                val missing = botPerms.filterNot {
+                    ctx.guild!!.selfMember.hasPermission(ctx.textChannel!!, it)
+                }
+
+                if (missing.isNotEmpty()) {
+                    return emit(MissingPermissionsEvent(ctx, commandFunction, missing))
+                }
+            }
+
+            /* NSFW channel check */
+            if (commandFunction.properties.nsfw && !ctx.textChannel!!.isNSFW) {
+                return emit(BadEnvironmentEvent(ctx, commandFunction, BadEnvironmentEvent.Reason.NonNSFW))
+            }
         }
 
         /* run inhibitors */
@@ -165,11 +206,16 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         val content = message.contentRaw.drop(prefix.length)
 
         /* find the command trigger. */
-        val trigger = messageCommands.values.firstNotNullOf { command ->
+        val trigger = messageCommands.values.firstNotNullOfOrNull { command ->
             val triggers = listOf(command.name, *command.properties.aliases)
             val pattern = """(?i)^(${triggers.joinToString("|") { "\\Q$it\\E" }})($|\s.+$)""".toPattern()
             pattern.matcher(content).takeIf { it.find() }?.group(1)
-        }.lowercase()
+        }
+
+        if (trigger == null) {
+            val args = content.split(" +".toRegex())
+            return emit(UnknownCommandEvent(message, args.first(), args))
+        }
 
         /* get the remaining arguments. */
         val args = content
@@ -179,8 +225,8 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
             .toMutableList()
 
         /* find the root command. */
-        val command = messageCommands[trigger]
-            ?: messageCommands.findCommandByAlias(trigger)
+        val command = messageCommands[trigger.lowercase()]
+            ?: messageCommands.findCommandByAlias(trigger.lowercase())
             ?: return emit(UnknownCommandEvent(message, trigger, args))
 
         /* find a sub command. */
@@ -221,7 +267,56 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         val ctx = SlashContext(interaction, this, command)
 
         /* run some checks. */
-        if (!runCommandChecks(ctx, command)) {
+        if (baseCommand.properties.developerOnly && !resources.developers.contains(ctx.author.idLong)) {
+            return emit(BadEnvironmentEvent(ctx, command, BadEnvironmentEvent.Reason.NonDeveloper))
+        }
+
+        if (ctx.channel !is GuildChannel && baseCommand.properties.guildOnly) {
+            return emit(BadEnvironmentEvent(ctx, command, BadEnvironmentEvent.Reason.NonGuild))
+        }
+
+        if (ctx.channel is GuildChannel) {
+            /* check for missing user permissions */
+            val userPerms = if (ctx.command is SlashSubCommandFunction)
+                arrayOf(*ctx.command.userPermissions, *baseCommand.userPermissions) else
+                baseCommand.userPermissions
+
+            if (userPerms.isNotEmpty()) {
+                val missing = userPerms.filterNot {
+                    ctx.member!!.hasPermission(ctx.textChannel!!, it)
+                }
+
+                if (missing.isNotEmpty()) {
+                    return emit(UserMissingPermissionsEvent(ctx, command, missing))
+                }
+            }
+
+            /* check for missing bot permissions */
+            val botPerms = if (ctx.command is SlashSubCommandFunction)
+                arrayOf(*ctx.command.botPermissions, *baseCommand.botPermissions) else
+                baseCommand.botPermissions
+
+            if (botPerms.isNotEmpty()) {
+                val missing = botPerms.filterNot {
+                    ctx.guild!!.selfMember.hasPermission(ctx.textChannel!!, it)
+                }
+
+                if (missing.isNotEmpty()) {
+                    return emit(MissingPermissionsEvent(ctx, command, missing))
+                }
+            }
+
+            /* NSFW channel check */
+            if (baseCommand.properties.nsfwOnly && !ctx.textChannel!!.isNSFW) {
+                return emit(BadEnvironmentEvent(ctx, command, BadEnvironmentEvent.Reason.NonNSFW))
+            }
+        }
+
+        /* run inhibitors */
+        val shouldExecute = resources.inhibitor(ctx, command)
+            && command.cog.localCheck(ctx, command)
+
+        if (!shouldExecute) {
             return
         }
 
@@ -410,63 +505,6 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
                 resources.developers.add(it.owner.idLong)
             }
         }
-    }
-
-    private suspend fun runCommandChecks(ctx: Context, command: ICommand): Boolean {
-        // developer only
-        if (command.developerOnly && !resources.developers.contains(ctx.author.idLong)) {
-            emit(BadEnvironmentEvent(ctx, command, BadEnvironmentEvent.Reason.NonDeveloper))
-            return false
-        }
-
-        // guild only
-        if (ctx.channel !is GuildChannel && command.guildOnly) {
-            emit(BadEnvironmentEvent(ctx, command, BadEnvironmentEvent.Reason.NonGuild))
-            return false
-        }
-
-        // permissions
-        if (ctx.channel is GuildChannel) {
-            /* check for missing user permissions */
-            val userPerms = if (command is SlashSubCommandFunction)
-                arrayOf(*command.userPermissions, *command.userPermissions) else
-                command.userPermissions
-
-            if (userPerms.isNotEmpty()) {
-                val missing = userPerms.filterNot {
-                    ctx.member!!.hasPermission(ctx.textChannel!!, it)
-                }
-
-                if (missing.isNotEmpty()) {
-                    emit(UserMissingPermissionsEvent(ctx, command, missing))
-                    return false
-                }
-            }
-
-            /* check for missing bot permissions */
-            val botPerms = if (command is SlashSubCommandFunction)
-                arrayOf(*command.botPermissions, *command.botPermissions) else
-                command.botPermissions
-
-            if (botPerms.isNotEmpty()) {
-                val missing = botPerms.filterNot {
-                    ctx.guild!!.selfMember.hasPermission(ctx.textChannel!!, it)
-                }
-
-                if (missing.isNotEmpty()) {
-                    emit(MissingPermissionsEvent(ctx, command, missing))
-                    return false
-                }
-            }
-
-            /* NSFW channel check */
-            if (command.nsfwOnly && !ctx.textChannel!!.isNSFW) {
-                emit(BadEnvironmentEvent(ctx, command, BadEnvironmentEvent.Reason.NonNSFW))
-                return false
-            }
-        }
-
-        return true
     }
 
     private suspend fun emit(event: Event) {

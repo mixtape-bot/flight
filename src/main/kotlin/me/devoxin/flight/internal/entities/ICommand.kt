@@ -43,10 +43,6 @@ interface ICommand {
 // TODO: kill me rn
 
 @FlightPreview
-val ICommand.developerOnly
-    get() = if (this is SlashSubCommandFunction) properties.developerOnly else if (this is SlashCommandFunction) properties.developerOnly else false
-
-@FlightPreview
 val ICommand.botPermissions
     get() = when (this) {
         is SlashSubCommandFunction -> properties.botPermissions
@@ -65,14 +61,6 @@ val ICommand.userPermissions
         is MessageCommandFunction -> properties.userPermissions
         else -> emptyArray()
     }
-
-@FlightPreview
-val ICommand.guildOnly
-    get() = if (this is SlashSubCommandFunction) properties.guildOnly else if (this is SlashCommandFunction) properties.guildOnly else false
-
-@FlightPreview
-val ICommand.nsfwOnly
-    get() = if (this is SlashSubCommandFunction) properties.nsfwOnly else if (this is SlashCommandFunction) properties.nsfwOnly else false
 
 suspend fun ICommand.execute(ctx: Context, args: MutableMap<KParameter, Any?>): Result<Boolean> {
     method ?: throw OperationNotSupportedException()
