@@ -1,7 +1,7 @@
 package me.devoxin.flight.api.events
 
-import me.devoxin.flight.api.CommandFunction
-import me.devoxin.flight.api.Context
+import me.devoxin.flight.api.command.message.MessageCommandFunction
+import me.devoxin.flight.api.command.message.MessageContext
 import me.devoxin.flight.api.ratelimit.RateLimitType
 
 /**
@@ -10,7 +10,7 @@ import me.devoxin.flight.api.ratelimit.RateLimitType
  * @param ctx
  *   The current command context.
  *
- * @param command
+ * @param commandFunction
  *   The command that is on rate-limit
  *
  * @param remaining
@@ -19,8 +19,8 @@ import me.devoxin.flight.api.ratelimit.RateLimitType
  * @param entity
  *   ID of the entity that is being rate-limited, or -1 if global rate-limited.
  */
-data class CommandRateLimitedEvent(val ctx: Context, val command: CommandFunction, val remaining: Long, val entity: Long) :
+data class CommandRateLimitedEvent(val ctx: MessageContext, val commandFunction: MessageCommandFunction, val remaining: Long, val entity: Long) :
     Event {
     val type: RateLimitType
-        get() = command.rateLimit!!.type
+        get() = commandFunction.rateLimit!!.type
 }

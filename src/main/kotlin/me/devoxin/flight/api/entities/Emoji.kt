@@ -1,6 +1,6 @@
 package me.devoxin.flight.api.entities
 
-class Emoji(
+data class Emoji(
     val name: String,
     val id: Long,
     val animated: Boolean

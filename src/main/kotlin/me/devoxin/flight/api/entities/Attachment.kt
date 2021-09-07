@@ -5,7 +5,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 
-class Attachment(val stream: InputStream, val filename: String) {
+data class Attachment(val stream: InputStream, val filename: String) {
     companion object {
         fun from(inputStream: InputStream, filename: String): Attachment {
             return Attachment(inputStream, filename)

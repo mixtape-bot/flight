@@ -75,21 +75,26 @@ class FlightBuilder {
     val developers: MutableSet<Long> = mutableSetOf()
 
     /**
+     * A list of guild IDs used for testing slash commands.
+     */
+    var testGuilds: MutableSet<Long> = mutableSetOf()
+
+    /**
      * Registers an argument parser to the given class.
      *
      * @return The builder instance. Useful for chaining.
      */
-    fun parser(klass: Class<*>, parser: Parser<*>): FlightBuilder {
+    fun parser(klass: Class<*>, resolver: Resolver<*>): FlightBuilder {
         // This is kinda unsafe. Would use T, but nullable/boxed types revert
         // to their java.lang counterparts. E.g. Int? becomes java.lang.Integer,
         // but Int remains kotlin.Int.
         // See https://youtrack.jetbrains.com/issue/KT-35423
 
-        ArgParser.parsers[klass] = parser
+        ArgParser.parsers[klass] = resolver
         return this
     }
 
-    inline fun <reified T> parser(parser: Parser<T>) = parser(T::class.java, parser)
+    inline fun <reified T> parser(resolver: Resolver<T>) = parser(T::class.java, resolver)
 
     /**
      * Registers all default argument parsers.
@@ -98,45 +103,45 @@ class FlightBuilder {
      */
     fun registerDefaultParsers(): FlightBuilder {
         /* Kotlin types and primitives */
-        val booleanParser = BooleanParser()
+        val booleanParser = BooleanResolver()
         ArgParser.parsers[Boolean::class.java] = booleanParser
         ArgParser.parsers[java.lang.Boolean::class.java] = booleanParser
 
-        val doubleParser = DoubleParser()
+        val doubleParser = DoubleResolver()
         ArgParser.parsers[Double::class.java] = doubleParser
         ArgParser.parsers[java.lang.Double::class.java] = doubleParser
 
-        val floatParser = FloatParser()
+        val floatParser = FloatResolver()
         ArgParser.parsers[Float::class.java] = floatParser
         ArgParser.parsers[java.lang.Float::class.java] = floatParser
 
-        val intParser = IntParser()
+        val intParser = IntResolver()
         ArgParser.parsers[Int::class.java] = intParser
         ArgParser.parsers[java.lang.Integer::class.java] = intParser
 
-        val longParser = LongParser()
+        val longParser = LongResolver()
         ArgParser.parsers[Long::class.java] = longParser
         ArgParser.parsers[java.lang.Long::class.java] = longParser
 
         /* JDA entities */
-        val inviteParser = InviteParser()
+        val inviteParser = InviteResolver()
         ArgParser.parsers[Invite::class.java] = inviteParser
         ArgParser.parsers[net.dv8tion.jda.api.entities.Invite::class.java] = inviteParser
 
-        ArgParser.parsers[Member::class.java] = MemberParser
-        ArgParser.parsers[Role::class.java] = RoleParser
-        ArgParser.parsers[TextChannel::class.java] = TextChannelParser()
-        ArgParser.parsers[User::class.java] = UserParser
-        ArgParser.parsers[VoiceChannel::class.java] = VoiceChannelParser()
+        ArgParser.parsers[Member::class.java] = MemberResolver
+        ArgParser.parsers[Role::class.java] = RoleResolver
+        ArgParser.parsers[TextChannel::class.java] = TextChannelResolver()
+        ArgParser.parsers[User::class.java] = UserResolver
+        ArgParser.parsers[VoiceChannel::class.java] = VoiceChannelResolver()
 
         /* Custom entities */
-        ArgParser.parsers[Emoji::class.java] = EmojiParser()
-        ArgParser.parsers[String::class.java] = StringParser()
-        ArgParser.parsers[Snowflake::class.java] = SnowflakeParser
-        ArgParser.parsers[Mentionable::class.java] = MentionableParser()
+        ArgParser.parsers[Emoji::class.java] = EmojiResolver()
+        ArgParser.parsers[String::class.java] = StringResolver()
+        ArgParser.parsers[Snowflake::class.java] = SnowflakeResolver
+        ArgParser.parsers[Mentionable::class.java] = MentionableResolver()
 
         /* java tings */
-        ArgParser.parsers[URL::class.java] = UrlParser()
+        ArgParser.parsers[URL::class.java] = UrlResolver()
 
         return this
     }
@@ -159,7 +164,8 @@ class FlightBuilder {
             ignoreBots = ignoreBots,
             doTyping = doTyping,
             inhibitor = inhibitor,
-            developers = developers
+            developers = developers,
+            testGuilds = testGuilds
         )
 
         return Flight(resources)

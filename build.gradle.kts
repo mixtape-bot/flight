@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "gg.mixtape"
-version = "2.1.11"
+version = "2.1.12"
 
 repositories {
     mavenCentral()
@@ -22,7 +22,7 @@ dependencies {
     implementation(Dependencies.kotlinxCoroutinesJdk8)
     implementation("org.reflections:reflections:0.9.12")
 
-    api("net.dv8tion:JDA:4.3.0_313")
+    api("com.github.mixtape-oss:JDA:development-SNAPSHOT")
     api("org.slf4j:slf4j-api:1.7.32")
 
     testImplementation("ch.qos.logback:logback-classic:1.2.5")

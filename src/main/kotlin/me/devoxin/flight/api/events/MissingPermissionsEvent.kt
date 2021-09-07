@@ -1,7 +1,7 @@
 package me.devoxin.flight.api.events
 
-import me.devoxin.flight.api.CommandFunction
-import me.devoxin.flight.api.Context
+import me.devoxin.flight.api.command.message.MessageCommandFunction
+import me.devoxin.flight.api.command.message.MessageContext
 import net.dv8tion.jda.api.Permission
 
 /**
@@ -10,10 +10,10 @@ import net.dv8tion.jda.api.Permission
  * @param ctx
  *   The current command context.
  *
- * @param command
+ * @param commandFunction
  *   The command
  *
  * @param permissions
  *   List of [Permission]s we are lacking.
  */
-data class MissingPermissionsEvent(val ctx: Context, val command: CommandFunction, val permissions: List<Permission>) : Event
+data class MissingPermissionsEvent(val ctx: MessageContext, val commandFunction: MessageCommandFunction, val permissions: List<Permission>) : Event

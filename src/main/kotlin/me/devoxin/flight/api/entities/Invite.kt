@@ -3,7 +3,7 @@ package me.devoxin.flight.api.entities
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Invite
 
-class Invite(
+data class Invite(
     private val jda: JDA,
     val url: String,
     val code: String
