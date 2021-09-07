@@ -18,11 +18,9 @@ import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
-import kotlin.reflect.full.createInstance
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.hasAnnotation
-import kotlin.reflect.full.valueParameters
+import kotlin.reflect.full.*
 import kotlin.reflect.jvm.jvmErasure
+import kotlin.reflect.typeOf
 
 // TODO: make this wayyy fucking better, i might as well just remove all of the message command stuff.
 
@@ -96,7 +94,7 @@ object SlashCommandUtil {
 
         /* find the slash context parameter. */
         val ctxParam = meth.valueParameters.firstOrNull {
-            it.type.classifier?.equals(Context::class) == true
+            it.type.isSubtypeOf(typeOf<Context>())
         }
 
         require(ctxParam != null) {
@@ -105,7 +103,7 @@ object SlashCommandUtil {
 
         /* find arguments */
         val parameters = meth.valueParameters.filterNot {
-            it.type.classifier?.equals(Context::class) == true
+            it.type.isSubtypeOf(typeOf<Context>())
         }
 
         val arguments = getArguments(parameters)

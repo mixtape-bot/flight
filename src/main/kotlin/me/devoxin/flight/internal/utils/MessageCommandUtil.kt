@@ -15,6 +15,7 @@ import kotlin.reflect.KParameter
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.javaMethod
 import kotlin.reflect.jvm.jvmErasure
+import kotlin.reflect.typeOf
 
 object MessageCommandUtil {
     private val logger = LoggerFactory.getLogger(MessageCommandUtil::class.java)
@@ -41,7 +42,7 @@ object MessageCommandUtil {
         val properties = meth.findAnnotation<MessageCommand>()!!
         val rateLimit = meth.findAnnotation<RateLimit>()
         val ctxParam = meth.valueParameters.firstOrNull {
-            it.type.classifier?.equals(Context::class) == true
+            it.type.isSubtypeOf(typeOf<Context>())
         }
 
         require(ctxParam != null) {
@@ -49,7 +50,7 @@ object MessageCommandUtil {
         }
 
         val parameters = meth.valueParameters.filterNot {
-            it.type.classifier?.equals(Context::class) == true
+            it.type.isSubtypeOf(typeOf<Context>())
         }
 
         val arguments = loadParameters(parameters)
@@ -107,7 +108,7 @@ object MessageCommandUtil {
 
         /* find the message context parameter. */
         val ctxParam = meth.valueParameters.firstOrNull {
-            it.type.classifier?.equals(Context::class) == true
+            it.type.isSubtypeOf(typeOf<Context>())
         }
 
         require(ctxParam != null) {
@@ -116,7 +117,7 @@ object MessageCommandUtil {
 
         /* find arguments */
         val parameters = meth.valueParameters.filterNot {
-            it.type.classifier?.equals(Context::class) == true
+            it.type.isSubtypeOf(typeOf<Context>())
         }
 
         val arguments = loadParameters(parameters)

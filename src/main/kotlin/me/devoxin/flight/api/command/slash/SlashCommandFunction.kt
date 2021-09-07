@@ -27,5 +27,6 @@ data class SlashCommandFunction(
     /**
      * The command reference.
      */
-    val ref: Command? = null
+    var ref: Command? = null
+        internal set
 }

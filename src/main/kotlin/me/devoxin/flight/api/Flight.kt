@@ -12,6 +12,7 @@ import me.devoxin.flight.api.command.message.MessageContext
 import me.devoxin.flight.api.command.message.MessageSubCommandFunction
 import me.devoxin.flight.api.command.slash.SlashContext
 import me.devoxin.flight.api.command.slash.SlashSubCommandFunction
+import me.devoxin.flight.api.command.slash.annotations.Privilege
 import me.devoxin.flight.api.events.*
 import me.devoxin.flight.api.exceptions.BadArgument
 import me.devoxin.flight.api.exceptions.ParserNotRegistered
@@ -24,6 +25,7 @@ import me.devoxin.flight.internal.entities.SlashCommandRegistry
 import me.devoxin.flight.internal.entities.execute
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.ICommandHolder
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.events.GenericEvent
@@ -35,8 +37,7 @@ import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData
-import net.dv8tion.jda.internal.JDAImpl
-import net.dv8tion.jda.internal.entities.GuildImpl
+import net.dv8tion.jda.api.interactions.commands.privileges.CommandPrivilege
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KParameter
@@ -349,10 +350,6 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
             if (filter) it.properties.guildId.takeUnless { id -> id == -1L } == guildId else true
         }
 
-        if (commands.isEmpty()) {
-            return false
-        }
-
         var commandHolder: ICommandHolder = jda
         if (guildId != null) {
             val guild = jda.getGuildById(guildId)
@@ -380,54 +377,64 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
 
         /* creating */
         val upserting = mutableListOf(*creating.toTypedArray(), *updating.toTypedArray())
+
         val action = commandHolder.updateCommands()
         for (command in upserting) {
-            val data = CommandData(command.name, command.properties.description)
-            if (command.subCommands.isNotEmpty()) {
-                val subCommands = command.subCommands.map {
-                    convertSlashSubCommandToSubcommandData(
-                        "slash command \"${command.name}\"",
-                        it
-                    )
-                }
-                data.addSubcommands(subCommands)
-            } else if (command.subCommandGroups.isNotEmpty()) {
-                val groups = command.subCommandGroups.map { (name, group) ->
-                    val groupData = SubcommandGroupData(name, group.description)
-                    val commands = group.commands.map {
-                        convertSlashSubCommandToSubcommandData(
-                            "slash sub-command group \"${name}\" of slash command \"${command.name}\"",
-                            it
-                        )
-                    }
-                    groupData.addSubcommands(commands)
+            val data = CommandData(command.name, resources.descriptionProvider.provide(command, command.properties.description))
+            when {
+                command.subCommands.isNotEmpty() -> {
+                    val subCommands = command.subCommands.map { convertSlashSubCommandToSubcommandData("slash command \"${command.name}\"", it) }
+                    data.addSubcommands(subCommands)
                 }
 
-                data.addSubcommandGroups(groups)
-            } else {
-                val options = command.arguments.map { convertArgumentToOptionData(command.name, it) }
-                data.addOptions(options)
+                command.subCommandGroups.isNotEmpty() -> {
+                    val groups = command.subCommandGroups.map { (name, group) ->
+                        val groupData = SubcommandGroupData(name, group.description)
+                        val commands = group.commands.map { convertSlashSubCommandToSubcommandData("slash sub-command group \"${name}\" of slash command \"${command.name}\"", it) }
+                        groupData.addSubcommands(commands)
+                    }
+
+                    data.addSubcommandGroups(groups)
+                }
+
+                else -> {
+                    val options = command.arguments.map { convertArgumentToOptionData(command.name, it) }
+                    data.addOptions(options)
+                }
             }
 
             action.addCommands(data)
         }
 
-        action.queue()
+        /* update the references to each command. */
+        action.submit()
+            .await()
+            .forEach { c -> upserting.find { it.name == c.name }?.ref = c }
+
+        /* update the privileges for each command. */
+        if (commandHolder is Guild) {
+            val privileges = upserting
+                .filterNot { it.properties.privileges.isEmpty() }
+                .associate { it.ref!!.id to it.properties.privileges.map(::convertPrivilegeToCommandPrivilege) }
+
+            if (privileges.isNotEmpty()) {
+                commandHolder
+                    .updateCommandPrivileges(privileges)
+                    .submit()
+                    .await()
+            }
+        }
+
         return true
     }
 
     @FlightPreview
-    private fun convertSlashSubCommandToSubcommandData(
+    private suspend fun convertSlashSubCommandToSubcommandData(
         id: String,
         subCommand: SlashSubCommandFunction
     ): SubcommandData {
-        val data = SubcommandData(subCommand.name, subCommand.properties.description)
-        val options = subCommand.arguments.map {
-            convertArgumentToOptionData(
-                "slash sub-command \"${subCommand.name}\" of $id",
-                it
-            )
-        }
+        val data = SubcommandData(subCommand.name, resources.descriptionProvider.provide(subCommand, subCommand.properties.description))
+        val options = subCommand.arguments.map { convertArgumentToOptionData("slash sub-command \"${subCommand.name}\" of $id", it) }
         data.addOptions(options)
         return data
     }
@@ -438,6 +445,11 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
             ?: throw error("Argument ${argument.name} for $command doesn't have an option type.")
 
         return OptionData(type, argument.name, argument.optionProperties!!.description, argument.isRequired)
+    }
+
+    @FlightPreview
+    private fun convertPrivilegeToCommandPrivilege(privilege: Privilege): CommandPrivilege {
+        return CommandPrivilege(privilege.type, privilege.enabled, privilege.id)
     }
 
     private fun mergePermissions(a: Array<Permission>, b: Array<Permission>): Array<Permission> {

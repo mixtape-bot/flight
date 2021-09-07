@@ -80,6 +80,12 @@ class FlightBuilder {
     var testGuilds: MutableSet<Long> = mutableSetOf()
 
     /**
+     * The description provider to use for syncing slash commands.
+     * Defaults to [DescriptionProvider.Default]
+     */
+    var descriptionProvider: DescriptionProvider = DescriptionProvider.Default()
+
+    /**
      * Registers an argument parser to the given class.
      *
      * @return The builder instance. Useful for chaining.
@@ -165,7 +171,8 @@ class FlightBuilder {
             doTyping = doTyping,
             inhibitor = inhibitor,
             developers = developers,
-            testGuilds = testGuilds
+            testGuilds = testGuilds,
+            descriptionProvider = descriptionProvider
         )
 
         return Flight(resources)
