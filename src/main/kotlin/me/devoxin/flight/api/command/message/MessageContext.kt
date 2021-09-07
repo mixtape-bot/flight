@@ -35,8 +35,9 @@ class MessageContext(
     override val channel: MessageChannel
         get() = message.channel
 
-    val member: Member? = message.member
-    val textChannel: TextChannel? = if (message.isFromType(ChannelType.TEXT)) message.textChannel else null
+    override val member: Member?
+        get() = message.member
+
     val privateChannel: PrivateChannel? = if (message.isFromType(ChannelType.PRIVATE)) message.privateChannel else null
 
     override fun send(content: String) {

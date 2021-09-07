@@ -11,13 +11,13 @@ import java.util.*
 class MentionableResolver : Resolver<Mentionable> {
     override val optionType: OptionType = OptionType.MENTIONABLE
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<Mentionable> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<Mentionable> =
         Optional.of(Mentionable(option.asMentionable))
 
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<Mentionable> {
-        val mentionable: IMentionable? = RoleResolver.parseContent(ctx, param).orElse(null)
-            ?: MemberResolver.parseContent(ctx, param).orElse(null)
-            ?: RoleResolver.parseContent(ctx, param).orElse(null)
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<Mentionable> {
+        val mentionable: IMentionable? = RoleResolver.resolve(ctx, param).orElse(null)
+            ?: MemberResolver.resolve(ctx, param).orElse(null)
+            ?: RoleResolver.resolve(ctx, param).orElse(null)
 
         return Optional.ofNullable(mentionable?.let { Mentionable(it) })
     }

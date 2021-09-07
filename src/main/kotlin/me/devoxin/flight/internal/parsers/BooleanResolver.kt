@@ -11,13 +11,13 @@ import javax.naming.OperationNotSupportedException
 class BooleanResolver : Resolver<Boolean> {
     override val optionType: OptionType = OptionType.BOOLEAN
 
-    override suspend fun getChoiceValue(name: String, value: Any): Command.Choice =
+    override suspend fun getOptionChoice(name: String, value: Any): Command.Choice =
         throw OperationNotSupportedException()
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<Boolean> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<Boolean> =
         Optional.of(option.asBoolean)
 
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<Boolean> {
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<Boolean> {
         if (trueExpr.contains(param)) {
             return Optional.of(true)
         } else if (falseExpr.contains(param)) {

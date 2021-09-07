@@ -10,15 +10,15 @@ import java.util.*
 class DoubleResolver : Resolver<Double> {
     override val optionType: OptionType = OptionType.NUMBER
 
-    override suspend fun getChoiceValue(name: String, value: Any): Command.Choice {
+    override suspend fun getOptionChoice(name: String, value: Any): Command.Choice {
         require(value is Double) { "$value is not a double." }
         return Command.Choice(name, value.toDouble())
     }
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<Double> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<Double> =
         Optional.of(option.asDouble)
 
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<Double> {
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<Double> {
         return Optional.ofNullable(param.toDoubleOrNull())
     }
 }

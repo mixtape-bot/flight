@@ -11,15 +11,15 @@ class LongResolver : Resolver<Long> {
     override val optionType: OptionType
         get() = OptionType.NUMBER
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<Long> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<Long> =
         Optional.of(option.asLong)
 
-    override suspend fun getChoiceValue(name: String, value: Any): Command.Choice {
+    override suspend fun getOptionChoice(name: String, value: Any): Command.Choice {
         require (value is Long) { "$value is not a long." }
         return Command.Choice(name, value.toLong())
     }
 
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<Long> {
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<Long> {
         return Optional.ofNullable(param.toLongOrNull())
     }
 }

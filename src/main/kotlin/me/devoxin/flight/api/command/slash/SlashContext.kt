@@ -7,6 +7,7 @@ import me.devoxin.flight.internal.entities.ICommand
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.commands.CommandInteraction
@@ -33,6 +34,9 @@ class SlashContext(
 
     override val trigger: String
         get() = command.name
+
+    override val member: Member?
+        get() = interaction.member
 
     override fun send(content: String) {
         interaction

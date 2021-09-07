@@ -10,15 +10,15 @@ import java.util.*
 class IntResolver : Resolver<Int> {
     override val optionType: OptionType = OptionType.INTEGER
 
-    override suspend fun getChoiceValue(name: String, value: Any): Command.Choice {
+    override suspend fun getOptionChoice(name: String, value: Any): Command.Choice {
         require(value is Int) { "$value is not an integer" }
         return Command.Choice(name, value.toLong())
     }
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<Int> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<Int> =
         Optional.of(option.asLong.toInt())
 
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<Int> {
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<Int> {
         return Optional.ofNullable(param.toIntOrNull())
     }
 }

@@ -9,10 +9,10 @@ import java.util.*
 class StringResolver : Resolver<String> {
     override val optionType: OptionType = OptionType.STRING
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<String> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<String> =
         Optional.of(option.asString)
 
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<String> {
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<String> {
         if (param.isEmpty() || param.isBlank()) {
             return Optional.empty()
         }

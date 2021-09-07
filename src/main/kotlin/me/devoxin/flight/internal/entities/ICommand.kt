@@ -1,7 +1,13 @@
 package me.devoxin.flight.internal.entities
 
+import me.devoxin.flight.annotation.FlightPreview
+import me.devoxin.flight.api.annotations.RateLimit
 import me.devoxin.flight.api.command.Context
+import me.devoxin.flight.api.command.message.MessageCommandFunction
 import me.devoxin.flight.api.command.message.MessageContext
+import me.devoxin.flight.api.command.message.MessageSubCommandFunction
+import me.devoxin.flight.api.command.slash.SlashCommandFunction
+import me.devoxin.flight.api.command.slash.SlashSubCommandFunction
 import me.devoxin.flight.api.entities.Cog
 import me.devoxin.flight.internal.arguments.CommandArgument
 import javax.naming.OperationNotSupportedException
@@ -22,11 +28,51 @@ interface ICommand {
     val declaringClass: Any? get() = cog
 
     interface Slash : ICommand
+
     interface Message : ICommand
+
+    interface HasRateLimit : ICommand {
+        val rateLimit: RateLimit?
+    }
+
     interface Categorized : ICommand {
         val category: String
     }
 }
+
+// TODO: kill me rn
+
+@FlightPreview
+val ICommand.developerOnly
+    get() = if (this is SlashSubCommandFunction) properties.developerOnly else if (this is SlashCommandFunction) properties.developerOnly else false
+
+@FlightPreview
+val ICommand.botPermissions
+    get() = when (this) {
+        is SlashSubCommandFunction -> properties.botPermissions
+        is SlashCommandFunction -> properties.botPermissions
+        is MessageSubCommandFunction -> properties.botPermissions
+        is MessageCommandFunction -> properties.userPermissions
+        else -> emptyArray()
+    }
+
+@FlightPreview
+val ICommand.userPermissions
+    get() = when (this) {
+        is SlashSubCommandFunction -> properties.userPermissions
+        is SlashCommandFunction -> properties.userPermissions
+        is MessageSubCommandFunction -> properties.userPermissions
+        is MessageCommandFunction -> properties.userPermissions
+        else -> emptyArray()
+    }
+
+@FlightPreview
+val ICommand.guildOnly
+    get() = if (this is SlashSubCommandFunction) properties.guildOnly else if (this is SlashCommandFunction) properties.guildOnly else false
+
+@FlightPreview
+val ICommand.nsfwOnly
+    get() = if (this is SlashSubCommandFunction) properties.nsfwOnly else if (this is SlashCommandFunction) properties.nsfwOnly else false
 
 suspend fun ICommand.execute(ctx: Context, args: MutableMap<KParameter, Any?>): Result<Boolean> {
     method ?: throw OperationNotSupportedException()

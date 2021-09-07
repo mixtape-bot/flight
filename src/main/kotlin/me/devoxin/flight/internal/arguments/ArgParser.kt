@@ -95,7 +95,7 @@ class ArgParser(
                     while (args.isNotEmpty()) {
                         val (argument, original) = getNextArgument(false)
                         val parsed = if (argument.isEmpty()) Optional.empty() else argument
-                            .runCatching { parser.parseContent(ctx, argument) }
+                            .runCatching { parser.resolve(ctx, argument) }
                             .getOrElse { throw BadArgument(arg, argument, it) }
 
                         if (!parsed.isPresent) {
@@ -122,7 +122,7 @@ class ArgParser(
                 GreedyType.Computed -> {
                     val (argument, original) = getNextArgument(true)
                     val resolved = (if (argument.isEmpty()) Optional.empty() else argument
-                        .runCatching { parser.parseContent(ctx, argument) }
+                        .runCatching { parser.resolve(ctx, argument) }
                         .getOrElse { throw BadArgument(arg, argument, it) })
                         .orElse(null)
 
@@ -132,7 +132,7 @@ class ArgParser(
         } else {
             val (argument, original) = getNextArgument(false)
             val resolved = (if (argument.isEmpty()) Optional.empty() else argument
-                .runCatching { parser.parseContent(ctx, argument) }
+                .runCatching { parser.resolve(ctx, argument) }
                 .getOrElse { throw BadArgument(arg, argument, it) })
                 .orElse(null)
 

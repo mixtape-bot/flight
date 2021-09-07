@@ -15,4 +15,4 @@ data class MessageSubCommandFunction(
     override val cog: Cog,
     override val arguments: List<CommandArgument>,
     override val contextParameter: KParameter
-) : ICommand
+) : ICommand.Message

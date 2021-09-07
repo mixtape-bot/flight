@@ -10,11 +10,11 @@ import java.util.*
 object RoleResolver : Resolver<Role> {
     override val optionType: OptionType = OptionType.ROLE
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<Role> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<Role> =
         Optional.of(option.asRole)
 
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<Role> {
-        val snowflake = SnowflakeResolver.parseContent(ctx, param)
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<Role> {
+        val snowflake = SnowflakeResolver.resolve(ctx, param)
         val role: Role? = if (snowflake.isPresent) {
             ctx.guild?.getRoleById(snowflake.get().resolved)
         } else {

@@ -16,9 +16,9 @@ data class MessageCommandFunction(
     override val contextParameter: KParameter,
     override val category: String,
     val properties: MessageCommand,
-    val rateLimit: RateLimit?,
+    override val rateLimit: RateLimit?,
     val subCommands: List<MessageSubCommandFunction>
-) : ICommand.Message, ICommand.Categorized {
+) : ICommand.Message, ICommand.Categorized, ICommand.HasRateLimit {
     val subcommands = hashMapOf<String, MessageSubCommandFunction>()
 
     init {

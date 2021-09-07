@@ -6,7 +6,7 @@ import java.util.*
 import java.util.regex.Pattern
 
 class InviteResolver : Resolver<Invite> {
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<Invite> {
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<Invite> {
         val match = INVITE_REGEX.matcher(param)
 
         if (match.find()) {

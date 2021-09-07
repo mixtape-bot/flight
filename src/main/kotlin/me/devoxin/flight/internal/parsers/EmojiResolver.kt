@@ -8,7 +8,7 @@ import java.util.regex.Pattern
 // TODO: maybe make this support slash commands?
 class EmojiResolver : Resolver<Emoji> {
     // TODO: Support unicode emoji?
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<Emoji> {
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<Emoji> {
         val match = EMOJI_REGEX.matcher(param)
 
         if (match.find()) {

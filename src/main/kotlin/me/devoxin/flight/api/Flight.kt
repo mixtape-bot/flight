@@ -7,9 +7,9 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.invoke
 import kotlinx.coroutines.launch
 import me.devoxin.flight.annotation.FlightPreview
+import me.devoxin.flight.api.command.Context
 import me.devoxin.flight.api.command.message.MessageCommandFunction
 import me.devoxin.flight.api.command.message.MessageContext
-import me.devoxin.flight.api.command.message.MessageSubCommandFunction
 import me.devoxin.flight.api.command.slash.SlashContext
 import me.devoxin.flight.api.command.slash.SlashSubCommandFunction
 import me.devoxin.flight.api.command.slash.annotations.Privilege
@@ -19,13 +19,10 @@ import me.devoxin.flight.api.exceptions.ParserNotRegistered
 import me.devoxin.flight.api.ratelimit.RateLimit
 import me.devoxin.flight.internal.arguments.ArgParser
 import me.devoxin.flight.internal.arguments.CommandArgument
-import me.devoxin.flight.internal.entities.CommandRegistry
-import me.devoxin.flight.internal.entities.ICommand
-import me.devoxin.flight.internal.entities.SlashCommandRegistry
-import me.devoxin.flight.internal.entities.execute
+import me.devoxin.flight.internal.entities.*
 import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.GuildChannel
 import net.dv8tion.jda.api.entities.ICommandHolder
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.events.GenericEvent
@@ -42,6 +39,7 @@ import org.slf4j.LoggerFactory
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KParameter
 
+@OptIn(FlightPreview::class)
 class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
 
     /**
@@ -85,59 +83,9 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         }
 
         /* do some checks. */
-        val props = commandFunction.properties
-
-        // developer only
-        if (props.developerOnly && !resources.developers.contains(ctx.author.idLong)) {
+        if (!runCommandChecks(ctx, commandFunction)) {
             return
         }
-
-        // guild only
-        if (!ctx.message.channelType.isGuild && props.guildOnly) {
-            return
-        }
-
-        // permissions
-        if (ctx.message.channelType.isGuild) {
-            /* check for missing user permissions */
-            val userPerms = if (ctx.command is MessageSubCommandFunction)
-                mergePermissions(ctx.command.properties.userPermissions, props.userPermissions) else
-                props.userPermissions
-
-            if (userPerms.isNotEmpty()) {
-                val missing = userPerms.filterNot {
-                    ctx.message.member!!.hasPermission(ctx.textChannel!!, it)
-                }
-
-                if (missing.isNotEmpty()) {
-                    return emit(UserMissingPermissionsEvent(ctx, commandFunction, missing))
-                }
-            }
-
-            /* check for missing bot permissions */
-            val botPerms = if (ctx.command is MessageSubCommandFunction)
-                mergePermissions(ctx.command.properties.botPermissions, props.botPermissions) else
-                props.botPermissions
-
-            // TODO: clean up ^^ and the user permissions
-
-            if (botPerms.isNotEmpty()) {
-                val missing = botPerms.filterNot {
-                    ctx.guild!!.selfMember.hasPermission(ctx.textChannel!!, it)
-                }
-
-                if (missing.isNotEmpty()) {
-                    return emit(MissingPermissionsEvent(ctx, commandFunction, missing))
-                }
-            }
-
-            /* NSFW channel check */
-            if (props.nsfw && !ctx.textChannel!!.isNSFW) {
-                return
-            }
-        }
-
-        emit(CommandInvokedEvent(ctx, commandFunction))
 
         /* run inhibitors */
         val shouldExecute = resources.inhibitor(ctx, commandFunction)
@@ -174,6 +122,8 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
                 )
             }
         }
+
+        emit(CommandInvokedEvent(ctx, commandFunction))
 
         /* execute the command. */
         val exec = suspend {
@@ -248,7 +198,6 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         }
     }
 
-    @OptIn(FlightPreview::class)
     private suspend fun handleSlashCommand(interaction: SlashCommandEvent) {
         val baseCommand = slashCommands.findCommandByName(interaction.name)
             ?: return emit(UnknownSlashCommandEvent(interaction, interaction.name))
@@ -270,6 +219,13 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         }
 
         val ctx = SlashContext(interaction, this, command)
+
+        /* run some checks. */
+        if (!runCommandChecks(ctx, command)) {
+            return
+        }
+
+        /* get the command arguments  */
         val arguments = mutableMapOf<KParameter, Any?>()
         try {
             for (argument in command.arguments) {
@@ -289,7 +245,7 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
                 val parser = ArgParser.parsers[argument.type]
                     ?: throw ParserNotRegistered("No parsers registered for `${argument.type}`")
 
-                val value = parser.getOptionValue(ctx, option)
+                val value = parser.resolveOption(ctx, option)
                 if (!value.isPresent && !argument.isRequired) {
                     throw BadArgument(argument, option.asString, IllegalArgumentException("Not enough arguments"))
                 }
@@ -302,6 +258,7 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
             return emit(ParsingErrorEvent(ctx, command, e))
         }
 
+        /* execute the command uwu */
         val result = command
             .execute(ctx, arguments)
             .onFailure {
@@ -376,29 +333,29 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         log.debug("${"Global commands".takeIf { guildId == null } ?: "($guildId)"} being created=${creating.size}; deleted=${deleting.size}; updated=${updating.size}")
 
         /* creating */
-        val upserting = mutableListOf(*creating.toTypedArray(), *updating.toTypedArray())
+        val adding = mutableListOf(*creating.toTypedArray(), *updating.toTypedArray())
 
         val action = commandHolder.updateCommands()
-        for (command in upserting) {
+        for (command in adding) {
             val data = CommandData(command.name, resources.descriptionProvider.provide(command, command.properties.description))
             when {
                 command.subCommands.isNotEmpty() -> {
-                    val subCommands = command.subCommands.map { convertSlashSubCommandToSubcommandData("slash command \"${command.name}\"", it) }
+                    val subCommands = command.subCommands.map { convertSlashSubCommandToSubcommandData(it) }
                     data.addSubcommands(subCommands)
                 }
 
                 command.subCommandGroups.isNotEmpty() -> {
                     val groups = command.subCommandGroups.map { (name, group) ->
                         val groupData = SubcommandGroupData(name, group.description)
-                        val commands = group.commands.map { convertSlashSubCommandToSubcommandData("slash sub-command group \"${name}\" of slash command \"${command.name}\"", it) }
-                        groupData.addSubcommands(commands)
+                        val subCommands = group.commands.map { convertSlashSubCommandToSubcommandData(it) }
+                        groupData.addSubcommands(subCommands)
                     }
 
                     data.addSubcommandGroups(groups)
                 }
 
                 else -> {
-                    val options = command.arguments.map { convertArgumentToOptionData(command.name, it) }
+                    val options = command.arguments.map { convertArgumentToOptionData(it) }
                     data.addOptions(options)
                 }
             }
@@ -409,11 +366,11 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         /* update the references to each command. */
         action.submit()
             .await()
-            .forEach { c -> upserting.find { it.name == c.name }?.ref = c }
+            .forEach { c -> adding.find { it.name == c.name }?.ref = c }
 
         /* update the privileges for each command. */
         if (commandHolder is Guild) {
-            val privileges = upserting
+            val privileges = adding
                 .filterNot { it.properties.privileges.isEmpty() }
                 .associate { it.ref!!.id to it.properties.privileges.map(::convertPrivilegeToCommandPrivilege) }
 
@@ -429,22 +386,16 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
     }
 
     @FlightPreview
-    private suspend fun convertSlashSubCommandToSubcommandData(
-        id: String,
-        subCommand: SlashSubCommandFunction
-    ): SubcommandData {
+    private suspend fun convertSlashSubCommandToSubcommandData(subCommand: SlashSubCommandFunction): SubcommandData {
         val data = SubcommandData(subCommand.name, resources.descriptionProvider.provide(subCommand, subCommand.properties.description))
-        val options = subCommand.arguments.map { convertArgumentToOptionData("slash sub-command \"${subCommand.name}\" of $id", it) }
+        val options = subCommand.arguments.map { convertArgumentToOptionData(it) }
         data.addOptions(options)
         return data
     }
 
     @FlightPreview
-    private fun convertArgumentToOptionData(command: String, argument: CommandArgument): OptionData {
-        val type = argument.optionType
-            ?: throw error("Argument ${argument.name} for $command doesn't have an option type.")
-
-        return OptionData(type, argument.name, argument.optionProperties!!.description, argument.isRequired)
+    private suspend fun convertArgumentToOptionData(argument: CommandArgument): OptionData {
+        return argument.resolver?.getOption(argument)!!
     }
 
     @FlightPreview
@@ -452,13 +403,6 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
         return CommandPrivilege(privilege.type, privilege.enabled, privilege.id)
     }
 
-    private fun mergePermissions(a: Array<Permission>, b: Array<Permission>): Array<Permission> {
-        val new = arrayListOf<Permission>()
-        new.addAll(a)
-        new.addAll(b)
-
-        return new.toTypedArray() // hmm
-    }
 
     private fun onReady(event: ReadyEvent) {
         if (resources.developers.isEmpty()) {
@@ -466,6 +410,63 @@ class Flight(val resources: FlightResources) : EventListener, CoroutineScope {
                 resources.developers.add(it.owner.idLong)
             }
         }
+    }
+
+    private suspend fun runCommandChecks(ctx: Context, command: ICommand): Boolean {
+        // developer only
+        if (command.developerOnly && !resources.developers.contains(ctx.author.idLong)) {
+            emit(BadEnvironmentEvent(ctx, command, BadEnvironmentEvent.Reason.NonDeveloper))
+            return false
+        }
+
+        // guild only
+        if (ctx.channel !is GuildChannel && command.guildOnly) {
+            emit(BadEnvironmentEvent(ctx, command, BadEnvironmentEvent.Reason.NonGuild))
+            return false
+        }
+
+        // permissions
+        if (ctx.channel is GuildChannel) {
+            /* check for missing user permissions */
+            val userPerms = if (command is SlashSubCommandFunction)
+                arrayOf(*command.userPermissions, *command.userPermissions) else
+                command.userPermissions
+
+            if (userPerms.isNotEmpty()) {
+                val missing = userPerms.filterNot {
+                    ctx.member!!.hasPermission(ctx.textChannel!!, it)
+                }
+
+                if (missing.isNotEmpty()) {
+                    emit(UserMissingPermissionsEvent(ctx, command, missing))
+                    return false
+                }
+            }
+
+            /* check for missing bot permissions */
+            val botPerms = if (command is SlashSubCommandFunction)
+                arrayOf(*command.botPermissions, *command.botPermissions) else
+                command.botPermissions
+
+            if (botPerms.isNotEmpty()) {
+                val missing = botPerms.filterNot {
+                    ctx.guild!!.selfMember.hasPermission(ctx.textChannel!!, it)
+                }
+
+                if (missing.isNotEmpty()) {
+                    emit(MissingPermissionsEvent(ctx, command, missing))
+                    return false
+                }
+            }
+
+            /* NSFW channel check */
+            if (command.nsfwOnly && !ctx.textChannel!!.isNSFW) {
+                emit(BadEnvironmentEvent(ctx, command, BadEnvironmentEvent.Reason.NonNSFW))
+                return false
+            }
+        }
+
+        return true
     }
 
     private suspend fun emit(event: Event) {

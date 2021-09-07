@@ -10,11 +10,11 @@ import java.util.*
 class VoiceChannelResolver : Resolver<VoiceChannel> {
     override val optionType: OptionType = OptionType.CHANNEL
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<VoiceChannel> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<VoiceChannel> =
         Optional.ofNullable(option.asGuildChannel as? VoiceChannel)
 
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<VoiceChannel> {
-        val snowflake = SnowflakeResolver.parseContent(ctx, param)
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<VoiceChannel> {
+        val snowflake = SnowflakeResolver.resolve(ctx, param)
 
         /* test cache */
         var channel: VoiceChannel? = if (snowflake.isPresent) {

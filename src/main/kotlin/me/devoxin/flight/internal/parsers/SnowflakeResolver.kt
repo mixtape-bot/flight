@@ -13,10 +13,10 @@ object SnowflakeResolver : Resolver<Snowflake> {
 
     override val optionType: OptionType = OptionType.STRING
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<Snowflake> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<Snowflake> =
         parse(option.asString)
 
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<Snowflake> =
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<Snowflake> =
         parse(param)
 
     private fun parse(param: String): Optional<Snowflake> {

@@ -10,15 +10,15 @@ import java.util.*
 class FloatResolver : Resolver<Float> {
     override val optionType: OptionType = OptionType.NUMBER
 
-    override suspend fun getChoiceValue(name: String, value: Any): Command.Choice {
+    override suspend fun getOptionChoice(name: String, value: Any): Command.Choice {
         require (value is Float) { "$value is not a float." }
         return Command.Choice(name, value.toDouble())
     }
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<Float> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<Float> =
         Optional.of(option.asDouble.toFloat())
 
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<Float> {
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<Float> {
         return Optional.ofNullable(param.toFloatOrNull())
     }
 }

@@ -2,6 +2,7 @@ package me.devoxin.flight.internal.arguments
 
 import me.devoxin.flight.api.command.message.annotations.GreedyInfo
 import me.devoxin.flight.api.exceptions.ParserNotRegistered
+import me.devoxin.flight.internal.parsers.Resolver
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import kotlin.reflect.KParameter
 
@@ -18,8 +19,11 @@ class CommandArgument(
     val isRequired: Boolean
         get() = !isNullable || !optional
 
+    val resolver: Resolver<*>?
+        get() = ArgParser.parsers[type]
+
     val optionType: OptionType?
-        get() = ArgParser.parsers[type]?.optionType
+        get() = resolver?.optionType
 
     fun format(withType: Boolean): String {
         return buildString {

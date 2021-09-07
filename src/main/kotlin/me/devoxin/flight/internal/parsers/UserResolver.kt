@@ -11,12 +11,12 @@ import java.util.*
 object UserResolver : Resolver<User> {
     override val optionType: OptionType = OptionType.USER
 
-    override suspend fun getOptionValue(ctx: SlashContext, option: OptionMapping): Optional<User> =
+    override suspend fun resolveOption(ctx: SlashContext, option: OptionMapping): Optional<User> =
         Optional.of(option.asUser)
 
     // TODO: Check ctx.message.mentionedUsers
-    override suspend fun parseContent(ctx: MessageContext, param: String): Optional<User> {
-        val snowflake = SnowflakeResolver.parseContent(ctx, param)
+    override suspend fun resolve(ctx: MessageContext, param: String): Optional<User> {
+        val snowflake = SnowflakeResolver.resolve(ctx, param)
 
         /* firstly, test the cache. */
         var user = if (snowflake.isPresent) {

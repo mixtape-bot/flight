@@ -5,9 +5,7 @@ import me.devoxin.flight.api.entities.Attachment
 import me.devoxin.flight.internal.entities.ICommand
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.MessageChannel
-import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.*
 
 interface Context {
     /**
@@ -41,6 +39,11 @@ interface Context {
     val author: User
 
     /**
+     * The member that executed the [command], or null if this command was executed in a private channel.
+     */
+    val member: Member?
+
+    /**
      * The guild that the [command] was executed in, or null if the command was executed in a DM.
      */
     val guild: Guild?
@@ -49,6 +52,9 @@ interface Context {
      * The channel that [command] was executed in.
      */
     val channel: MessageChannel
+
+    val textChannel: TextChannel?
+        get() = channel as? TextChannel
 
     /**
      * Sends a message embed to the channel the Context was created from.
