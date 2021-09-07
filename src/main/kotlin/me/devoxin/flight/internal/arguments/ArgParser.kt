@@ -1,16 +1,16 @@
 package me.devoxin.flight.internal.arguments
 
-import me.devoxin.flight.api.Context
-import me.devoxin.flight.api.annotations.GreedyType
+import me.devoxin.flight.api.command.message.MessageContext
+import me.devoxin.flight.api.command.message.annotations.GreedyType
 import me.devoxin.flight.api.exceptions.BadArgument
 import me.devoxin.flight.api.exceptions.ParserNotRegistered
-import me.devoxin.flight.internal.entities.Executable
-import me.devoxin.flight.internal.parsers.Parser
+import me.devoxin.flight.internal.entities.ICommand
+import me.devoxin.flight.internal.parsers.Resolver
 import java.util.*
 import kotlin.reflect.KParameter
 
 class ArgParser(
-    private val ctx: Context,
+    private val ctx: MessageContext,
     private val delimiter: Char,
     commandArgs: List<String>
 ) {
@@ -82,7 +82,7 @@ class ArgParser(
         return unquoted to original
     }
 
-    suspend fun parse(arg: Argument): Any? {
+    suspend fun parse(arg: CommandArgument): Any? {
         val parser = parsers[arg.type]
             ?: throw ParserNotRegistered("No parsers registered for `${arg.type}`")
 
@@ -95,7 +95,7 @@ class ArgParser(
                     while (args.isNotEmpty()) {
                         val (argument, original) = getNextArgument(false)
                         val parsed = if (argument.isEmpty()) Optional.empty() else argument
-                            .runCatching { parser.parse(ctx, argument) }
+                            .runCatching { parser.parseContent(ctx, argument) }
                             .getOrElse { throw BadArgument(arg, argument, it) }
 
                         if (!parsed.isPresent) {
@@ -122,7 +122,7 @@ class ArgParser(
                 GreedyType.Computed -> {
                     val (argument, original) = getNextArgument(true)
                     val resolved = (if (argument.isEmpty()) Optional.empty() else argument
-                        .runCatching { parser.parse(ctx, argument) }
+                        .runCatching { parser.parseContent(ctx, argument) }
                         .getOrElse { throw BadArgument(arg, argument, it) })
                         .orElse(null)
 
@@ -132,7 +132,7 @@ class ArgParser(
         } else {
             val (argument, original) = getNextArgument(false)
             val resolved = (if (argument.isEmpty()) Optional.empty() else argument
-                .runCatching { parser.parse(ctx, argument) }
+                .runCatching { parser.parseContent(ctx, argument) }
                 .getOrElse { throw BadArgument(arg, argument, it) })
                 .orElse(null)
 
@@ -142,7 +142,7 @@ class ArgParser(
         return result
     }
 
-    private fun parse(arg: Argument, argument: Pair<String, List<String>>, value: Any?): Any? {
+    private fun parse(arg: CommandArgument, argument: Pair<String, List<String>>, value: Any?): Any? {
         val canSubstitute = arg.isTentative || arg.isNullable || (arg.optional && argument.first.isEmpty())
         if (value == null && !canSubstitute) {
             // canSubstitute -> Whether we can pass null or the default value.
@@ -163,11 +163,11 @@ class ArgParser(
     }
 
     companion object {
-        val parsers = hashMapOf<Class<*>, Parser<*>>()
+        val parsers = hashMapOf<Class<*>, Resolver<*>>()
 
         suspend fun parseArguments(
-            cmd: Executable,
-            ctx: Context,
+            cmd: ICommand,
+            ctx: MessageContext,
             delimiter: Char
         ): HashMap<KParameter, Any?> {
             if (cmd.arguments.isEmpty()) {

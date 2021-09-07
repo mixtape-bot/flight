@@ -1,16 +1,16 @@
 package me.devoxin.flight.internal.entities
 
-import me.devoxin.flight.api.CommandFunction
+import me.devoxin.flight.api.command.message.MessageCommandFunction
 import me.devoxin.flight.api.entities.Cog
 import me.devoxin.flight.internal.utils.Indexer
+import me.devoxin.flight.internal.utils.MessageCommandUtil
 
-class CommandRegistry : HashMap<String, CommandFunction>() {
-
-    fun findCommandByName(name: String): CommandFunction? {
+class CommandRegistry : HashMap<String, MessageCommandFunction>() {
+    fun findCommandByName(name: String): MessageCommandFunction? {
         return this.get(name)
     }
 
-    fun findCommandByAlias(alias: String): CommandFunction? {
+    fun findCommandByAlias(alias: String): MessageCommandFunction? {
         return this.values.firstOrNull { it.properties.aliases.contains(alias) }
     }
 
@@ -18,11 +18,11 @@ class CommandRegistry : HashMap<String, CommandFunction>() {
         return this.values.firstOrNull { it.cog::class.simpleName == name }?.cog
     }
 
-    fun findCommandsByCog(cog: Cog): List<CommandFunction> {
+    fun findCommandsByCog(cog: Cog): List<MessageCommandFunction> {
         return this.values.filter { it.cog == cog }
     }
 
-    fun unload(commandFunction: CommandFunction) {
+    fun unload(commandFunction: MessageCommandFunction) {
         this.values.remove(commandFunction)
     }
 
@@ -40,10 +40,10 @@ class CommandRegistry : HashMap<String, CommandFunction>() {
 
     fun register(cog: Cog, indexer: Indexer? = null) {
         val i = indexer ?: Indexer(cog::class.java.`package`.name)
-        val commands = i.getCommands(cog)
+        val commands = i.getMessageCommands(cog)
 
         for (command in commands) {
-            val cmd = i.loadCommand(command, cog)
+            val cmd = MessageCommandUtil.loadCommand(command, cog)
 
             if (this.containsKey(cmd.name)) {
                 throw RuntimeException("Cannot register command ${cmd.name}; the trigger has already been registered.")

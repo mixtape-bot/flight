@@ -1,7 +1,7 @@
 package me.devoxin.flight.api.events
 
-import me.devoxin.flight.api.CommandFunction
-import me.devoxin.flight.api.Context
+import me.devoxin.flight.api.command.message.MessageCommandFunction
+import me.devoxin.flight.api.command.message.MessageContext
 
 /**
  * Emitted before a command is executed. Useful logging command usage etc.
@@ -9,7 +9,7 @@ import me.devoxin.flight.api.Context
  * @param ctx
  *   The command context
  *
- * @param command
+ * @param commandFunction
  *   The command being executed.
  */
-data class CommandInvokedEvent(val ctx: Context, val command: CommandFunction) : Event
+data class CommandInvokedEvent(val ctx: MessageContext, val commandFunction: MessageCommandFunction) : Event

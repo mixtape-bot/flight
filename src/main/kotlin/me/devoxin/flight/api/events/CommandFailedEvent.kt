@@ -1,7 +1,7 @@
 package me.devoxin.flight.api.events
 
-import me.devoxin.flight.api.CommandFunction
-import me.devoxin.flight.api.Context
+import me.devoxin.flight.api.command.Context
+import me.devoxin.flight.internal.entities.ICommand
 
 /**
  * Emitted when a command encountered an error during execution.
@@ -15,4 +15,4 @@ import me.devoxin.flight.api.Context
  * @param error
  *   The error encountered
  */
-data class CommandFailedEvent(val ctx: Context, val command: CommandFunction, val error: Throwable) : Event
+data class CommandFailedEvent(val ctx: Context, val command: ICommand, val error: Throwable) : Event
