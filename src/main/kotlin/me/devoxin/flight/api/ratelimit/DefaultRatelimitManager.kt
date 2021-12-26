@@ -3,26 +3,26 @@ package me.devoxin.flight.api.ratelimit
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.math.abs
+import kotlin.math.min
 
-class DefaultRateLimitStrategy : RateLimitStrategy {
-    private val buckets = ConcurrentHashMap<RateLimitType, Bucket>()
+public class DefaultRatelimitManager : RatelimitManager {
+    private val buckets = ConcurrentHashMap<RatelimitType, Bucket>()
 
-    override fun isRateLimited(id: Long, type: RateLimitType, commandName: String): Boolean {
+    override fun isRatelimited(id: Long, type: RatelimitType, commandName: String): Boolean {
         return buckets[type]?.isRateLimited(id, commandName) ?: false
     }
 
-    override fun getExpirationDate(id: Long, type: RateLimitType, commandName: String): Long {
+    override fun getExpirationDate(id: Long, type: RatelimitType, commandName: String): Long {
         return buckets[type]?.getExpirationDate(id, commandName) ?: 0
     }
 
-    override fun putRateLimit(id: Long, type: RateLimitType, duration: Long, commandName: String) {
-        buckets.computeIfAbsent(type) { Bucket() }.putRateLimit(id, duration, commandName)
+    override fun putRatelimit(id: Long, type: RatelimitType, duration: Long, commandName: String) {
+        buckets.computeIfAbsent(type) { Bucket() }.putRatelimit(id, duration, commandName)
     }
 
-    class Bucket {
+    private class Bucket {
         private val sweeperThread = Executors.newSingleThreadScheduledExecutor()
-        private val rateLimits = ConcurrentHashMap<Long, MutableSet<RateLimit>>() // EntityID => [Commands...]
+        private val rateLimits = ConcurrentHashMap<Long, MutableSet<Ratelimit>>() // EntityID => [Commands...]
 
         fun isRateLimited(id: Long, commandName: String): Boolean {
             return getExpirationDate(id, commandName) > 0
@@ -31,12 +31,13 @@ class DefaultRateLimitStrategy : RateLimitStrategy {
         fun getExpirationDate(id: Long, commandName: String): Long {
             val rateLimit = rateLimits[id]?.firstOrNull { it.name == commandName }
                 ?: return 0
-            return abs(rateLimit.expiresAt - System.currentTimeMillis())
+
+            return min(rateLimit.expiresAt - System.currentTimeMillis(), 0)
         }
 
-        fun putRateLimit(id: Long, time: Long, commandName: String) {
+        fun putRatelimit(id: Long, time: Long, commandName: String) {
             val cds = rateLimits.computeIfAbsent(id) { mutableSetOf() }
-            val rateLimit = RateLimit(commandName, System.currentTimeMillis() + time)
+            val rateLimit = Ratelimit(commandName, System.currentTimeMillis() + time)
             cds.add(rateLimit)
 
             sweeperThread.schedule({ cds.remove(rateLimit) }, time, TimeUnit.MILLISECONDS)

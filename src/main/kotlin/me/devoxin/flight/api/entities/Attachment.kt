@@ -5,19 +5,15 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 
-class Attachment(val stream: InputStream, val filename: String) {
-    companion object {
-        fun from(inputStream: InputStream, filename: String): Attachment {
-            return Attachment(inputStream, filename)
-        }
+public data class Attachment(val filename: String, val stream: InputStream) {
+    public companion object {
+        public fun from(filename: String, inputStream: InputStream): Attachment =
+            Attachment(filename, inputStream)
 
-        fun from(byteArray: ByteArray, filename: String): Attachment {
-            return Attachment(ByteArrayInputStream(byteArray), filename)
-        }
+        public fun from(filename: String, byteArray: ByteArray): Attachment =
+            Attachment(filename, ByteArrayInputStream(byteArray))
 
-        fun from(file: File, filename: String? = null): Attachment {
-            val name = filename ?: file.name
-            return Attachment(FileInputStream(file), name)
-        }
+        public fun from(file: File, filename: String? = null): Attachment =
+            Attachment(filename ?: file.name, FileInputStream(file))
     }
 }

@@ -7,25 +7,32 @@ plugins {
 }
 
 group = "gg.mixtape"
-version = "2.1.13"
+version = "2.4.2"
 
 repositories {
     mavenCentral()
-    maven("https://jitpack.io")
-    maven("https://m2.dv8tion.net/releases")
+    maven("https://dimensional.jfrog.io/artifactory/maven")
+    maven("https://oss.sonatype.org/content/repositories/snapshots/")
+}
+
+kotlin {
+    explicitApi()
 }
 
 dependencies {
     implementation(Dependencies.kotlinStdlib)
     implementation(Dependencies.kotlinReflect)
+    implementation(Dependencies.kotlinLogging)
     implementation(Dependencies.kotlinxCoroutines)
     implementation(Dependencies.kotlinxCoroutinesJdk8)
-    implementation("org.reflections:reflections:0.9.12")
 
-    api("net.dv8tion:JDA:4.3.0_313")
-    api("org.slf4j:slf4j-api:1.7.32")
+    implementation(Dependencies.arrow)
+    implementation(Dependencies.reflections)
 
-    testImplementation("ch.qos.logback:logback-classic:1.2.5")
+    api(Dependencies.jda)
+    api(Dependencies.slf4j)
+
+    testImplementation(Dependencies.logback)
 }
 
 /* publishing */
@@ -36,9 +43,8 @@ val sourcesJar by tasks.registering(Jar::class) {
 
 publishing {
     repositories {
-        maven {
+        maven("https://dimensional.jfrog.io/artifactory/maven") {
             name = "jfrog"
-            url = uri("https://dimensional.jfrog.io/artifactory/maven")
             credentials {
                 username = System.getenv("JFROG_USERNAME")
                 password = System.getenv("JFROG_PASSWORD")

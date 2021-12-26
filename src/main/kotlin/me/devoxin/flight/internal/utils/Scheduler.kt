@@ -5,8 +5,8 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
-object Scheduler {
-    private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor {
+public object Scheduler {
+    public val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor {
         Thread(it, "Flight Executor")
     }
 
@@ -22,7 +22,6 @@ object Scheduler {
      * @param block
      *   The block to call.
      */
-    fun every(delay: Long, timeUnit: TimeUnit = TimeUnit.MILLISECONDS, block: () -> Unit): ScheduledFuture<*> {
-        return executor.scheduleAtFixedRate(block, delay, delay, timeUnit)
-    }
+    public fun every(delay: Long, timeUnit: TimeUnit = TimeUnit.MILLISECONDS, block: () -> Unit): ScheduledFuture<*> =
+        executor.scheduleAtFixedRate(block, delay, delay, timeUnit)
 }

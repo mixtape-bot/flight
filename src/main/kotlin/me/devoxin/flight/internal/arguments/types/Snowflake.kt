@@ -1,3 +1,3 @@
 package me.devoxin.flight.internal.arguments.types
 
-data class Snowflake(val resolved: Long)
+public data class Snowflake(val value: Long)

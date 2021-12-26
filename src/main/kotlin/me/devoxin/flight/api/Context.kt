@@ -9,25 +9,38 @@ import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.*
 import java.util.regex.Pattern
 
-class Context(
-    val flight: Flight,
-    val message: Message,
-    val trigger: String,
-    val command: Executable,
-    val prefix: String,
-    val args: List<String>
+public class Context(
+    public val flight: Flight,
+    public val message: Message,
+    public val trigger: String,
+    public val command: Executable,
+    public val prefix: String,
+    public val args: List<String>
 ) {
-    val jda: JDA = message.jda
+    public companion object {
+        private val mentionPattern = Pattern.compile("(?<mention><(?<type>@!?|@&|#!?)(?<id>[0-9]{17,21})>)")
+    }
 
-    val author: User = message.author
+    public val jda: JDA
+        get() = message.jda
 
-    val guild: Guild? = if (message.isFromGuild) message.guild else null
-    val member: Member? = message.member
+    public val author: User
+        get() = message.author
 
-    val textChannel: TextChannel? = if (message.isFromType(ChannelType.TEXT)) message.textChannel else null
-    val privateChannel: PrivateChannel? = if (message.isFromType(ChannelType.PRIVATE)) message.privateChannel else null
-    val messageChannel: MessageChannel = message.channel
+    public val guild: Guild?
+        get() = if (message.isFromGuild) message.guild else null
 
+    public val member: Member?
+        get() = message.member
+
+    public val channel: MessageChannel
+        get() = message.channel
+
+    public val textChannel: TextChannel?
+        get() = channel as? TextChannel
+
+    public val privateChannel: PrivateChannel?
+        get() = channel as? PrivateChannel
 
     /**
      * Sends a message embed to the channel the Context was created from.
@@ -35,8 +48,8 @@ class Context(
      * @param content
      *        The content of the message.
      */
-    fun send(content: String) {
-        messageChannel.sendMessage(content).queue()
+    public fun send(content: String) {
+        channel.sendMessage(content).queue()
     }
 
     /**
@@ -45,8 +58,8 @@ class Context(
      * @param attachment
      *        The attachment to send.
      */
-    fun send(attachment: Attachment) {
-        messageChannel.sendFile(attachment.stream, attachment.filename).queue()
+    public fun send(attachment: Attachment) {
+        channel.sendFile(attachment.stream, attachment.filename).queue()
     }
 
     /**
@@ -55,12 +68,12 @@ class Context(
      * @param build
      *        Options to apply to the message embed.
      */
-    fun send(build: EmbedBuilder.() -> Unit) {
+    public inline fun send(build: EmbedBuilder.() -> Unit) {
         val embed = EmbedBuilder()
             .apply(build)
             .build()
 
-        messageChannel.sendMessageEmbeds(embed).queue()
+        channel.sendMessageEmbeds(embed).queue()
     }
 
     /**
@@ -71,8 +84,8 @@ class Context(
      *
      * @return The created message.
      */
-    suspend fun sendAsync(content: String): Message {
-        return messageChannel.sendMessage(content)
+    public suspend fun sendAsync(content: String): Message {
+        return channel.sendMessage(content)
             .submit()
             .await()
     }
@@ -85,8 +98,8 @@ class Context(
      *
      * @return The created message.
      */
-    suspend fun sendAsync(attachment: Attachment): Message {
-        return messageChannel.sendFile(attachment.stream, attachment.filename)
+    public suspend fun sendAsync(attachment: Attachment): Message {
+        return channel.sendFile(attachment.stream, attachment.filename)
             .submit()
             .await()
     }
@@ -99,12 +112,12 @@ class Context(
      *
      * @return The created message.
      */
-    suspend fun sendAsync(build: EmbedBuilder.() -> Unit): Message {
+    public suspend inline fun sendAsync(build: EmbedBuilder.() -> Unit): Message {
         val embed = EmbedBuilder()
             .apply(build)
             .build()
 
-        return messageChannel.sendMessageEmbeds(embed)
+        return channel.sendMessageEmbeds(embed)
             .submit()
             .await()
     }
@@ -115,12 +128,12 @@ class Context(
      * @param content
      *        The content of the message.
      */
-    fun sendPrivate(content: String) {
-        author.openPrivateChannel().submit()
-            .thenAccept {
-                it.sendMessage(content).submit()
-                    .handle { _, _ -> it.close().submit() }
-            }
+    public fun sendPrivate(content: String) {
+        author.openPrivateChannel().queue { privateChannel ->
+            privateChannel
+                .sendMessage(content)
+                .queue { privateChannel.close().submit() }
+        }
     }
 
     /**
@@ -129,10 +142,10 @@ class Context(
      * @param block
      *        The code that should be executed while the typing status is active.
      */
-    fun typing(block: () -> Unit) {
-        messageChannel.sendTyping().queue {
+    public fun typing(block: () -> Unit) {
+        channel.sendTyping().queue {
             val task = Scheduler.every(5000) {
-                messageChannel.sendTyping().queue()
+                channel.sendTyping().queue()
             }
 
             block()
@@ -146,10 +159,10 @@ class Context(
      * @param block
      *        The code that should be executed while the typing status is active.
      */
-    suspend fun typingAsync(block: suspend () -> Unit) {
-        messageChannel.sendTyping().submit().await()
+    public suspend fun typingAsync(block: suspend () -> Unit) {
+        channel.sendTyping().submit().await()
 
-        val task = Scheduler.every(5000) { messageChannel.sendTyping().queue() }
+        val task = Scheduler.every(5000) { channel.sendTyping().queue() }
         try {
             block()
         } finally {
@@ -171,7 +184,7 @@ class Context(
      *
      * @returns The sanitized string.
      */
-    fun cleanContent(str: String): String {
+    public fun cleanContent(str: String): String {
         var content = str.replace("e", "е")
         // We use a russian "e" instead of \u200b as it keeps character count the same.
         val matcher = mentionPattern.matcher(str)
@@ -188,11 +201,13 @@ class Context(
                         ?: "invalid-user"
                     content = content.replace(fullEntity, "@$entity")
                 }
+
                 "@&" -> {
                     val entity = jda.getRoleById(entityId)?.name ?: "invalid-role"
                     content = content.replace(fullEntity, "@$entity")
                 }
-                "#" -> {
+
+                "#", "#!" -> {
                     val entity = jda.getTextChannelById(entityId)?.name ?: "invalid-channel"
                     content = content.replace(fullEntity, "#$entity")
                 }
@@ -204,9 +219,5 @@ class Context(
         }
 
         return content
-    }
-
-    companion object {
-        private val mentionPattern = Pattern.compile("(?<mention><(?<type>@!?|@&|#)(?<id>[0-9]{17,21})>)")
     }
 }

@@ -1,7 +1,6 @@
 package me.devoxin.flight.api.ratelimit
 
-interface RateLimitStrategy {
-
+public interface RatelimitManager {
     /**
      * Checks whether the entity associated with the provided ID is on rate-limit.
      * When BucketType is `GUILD` and the command was invoked in a private context, this
@@ -23,7 +22,7 @@ interface RateLimitStrategy {
      * @returns True, if the entity associated with the ID is on rate-limit and the command should
      *          not be executed.
      */
-    fun isRateLimited(id: Long, type: RateLimitType, commandName: String): Boolean
+    public fun isRatelimited(id: Long, type: RatelimitType, commandName: String): Boolean
 
     /**
      * Gets the remaining time of the rate-limit in milliseconds.
@@ -39,7 +38,7 @@ interface RateLimitStrategy {
      * @param commandName
      *        The command to get the rate-limit time of.
      */
-    fun getExpirationDate(id: Long, type: RateLimitType, commandName: String): Long
+    public fun getExpirationDate(id: Long, type: RatelimitType, commandName: String): Long
 
     /**
      * Adds a rate-limit for the given entity ID.
@@ -60,6 +59,5 @@ interface RateLimitStrategy {
      * @param commandName
      *        The command to set rate-limit for.
      */
-    fun putRateLimit(id: Long, type: RateLimitType, duration: Long, commandName: String)
-
+    public fun putRatelimit(id: Long, type: RatelimitType, duration: Long, commandName: String)
 }

@@ -12,9 +12,10 @@ import net.dv8tion.jda.api.Permission
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
-annotation class SubCommand(
+public annotation class SubCommand(
     val aliases: Array<String> = [],
     val description: String = "No description available",
     val botPermissions: Array<Permission> = [],
-    val userPermissions: Array<Permission> = []
+    val userPermissions: Array<Permission> = [],
+    val developerOnly: Boolean = false
 )

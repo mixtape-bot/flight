@@ -4,42 +4,41 @@ import me.devoxin.flight.api.CommandFunction
 import me.devoxin.flight.api.entities.Cog
 import me.devoxin.flight.internal.utils.Indexer
 
-class CommandRegistry : HashMap<String, CommandFunction>() {
-
-    fun findCommandByName(name: String): CommandFunction? {
-        return this.get(name)
+public class CommandRegistry : HashMap<String, CommandFunction>() {
+    public fun findCommandByName(name: String): CommandFunction? {
+        return this.values.firstOrNull { it.name.equals(name, true) }
     }
 
-    fun findCommandByAlias(alias: String): CommandFunction? {
-        return this.values.firstOrNull { it.properties.aliases.contains(alias) }
+    public fun findCommandByAlias(alias: String): CommandFunction? {
+        return this.values.firstOrNull { it.properties.aliases.any { a -> a.equals(alias, true) } }
     }
 
-    fun findCogByName(name: String): Cog? {
+    public fun findCogByName(name: String): Cog? {
         return this.values.firstOrNull { it.cog::class.simpleName == name }?.cog
     }
 
-    fun findCommandsByCog(cog: Cog): List<CommandFunction> {
+    public fun findCommandsByCog(cog: Cog): List<CommandFunction> {
         return this.values.filter { it.cog == cog }
     }
 
-    fun unload(commandFunction: CommandFunction) {
+    public fun unload(commandFunction: CommandFunction) {
         this.values.remove(commandFunction)
     }
 
-    fun unload(cog: Cog) {
+    public fun unload(cog: Cog) {
         val commands = this.values.filter { it.cog == cog }
         this.values.removeAll(commands)
     }
 
-    fun register(packageName: String) {
+    public fun register(packageName: String) {
         val indexer = Indexer(packageName)
         for (cog in indexer.getCogs()) {
             register(cog, indexer)
         }
     }
 
-    fun register(cog: Cog, indexer: Indexer? = null) {
-        val i = indexer ?: Indexer(cog::class.java.`package`.name)
+    public fun register(cog: Cog, indexer: Indexer? = null) {
+        val i = indexer ?: Indexer(cog::class.java.getPackage().name)
         val commands = i.getCommands(cog)
 
         for (command in commands) {

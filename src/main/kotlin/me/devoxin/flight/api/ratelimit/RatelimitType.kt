@@ -1,6 +1,6 @@
 package me.devoxin.flight.api.ratelimit
 
-enum class RateLimitType {
+public enum class RatelimitType {
     USER,
     GUILD,
     GLOBAL,

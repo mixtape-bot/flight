@@ -1,6 +1,6 @@
 package me.devoxin.flight.api.annotations
 
-import me.devoxin.flight.api.ratelimit.RateLimitType
+import me.devoxin.flight.api.ratelimit.RatelimitType
 import java.util.concurrent.TimeUnit
 
 /**
@@ -8,11 +8,11 @@ import java.util.concurrent.TimeUnit
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)
-annotation class RateLimit(
+public annotation class RateLimit(
     /** How long the rate-limit lasts. */
     val duration: Long,
     /** The time unit of the duration. */
     val durationUnit: TimeUnit = TimeUnit.MILLISECONDS,
     /** The bucket this rate-limit applies to. */
-    val type: RateLimitType
+    val type: RatelimitType
 )

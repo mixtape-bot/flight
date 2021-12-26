@@ -7,6 +7,4 @@ package me.devoxin.flight.api.annotations
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.FUNCTION)
-annotation class Name(
-    val name: String = ""
-)
+public annotation class Name(val name: String = "")

@@ -1,6 +1,6 @@
 package me.devoxin.flight.api.events
 
 /**
- * An event emitted by a [CommandClient]
+ * An event emitted by an instance of [me.devoxin.flight.api.Flight]
  */
-interface Event
+public interface Event

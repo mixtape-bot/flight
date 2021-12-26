@@ -6,44 +6,46 @@ import me.devoxin.flight.api.SubCommandFunction
 import me.devoxin.flight.api.annotations.*
 import me.devoxin.flight.api.entities.Cog
 import me.devoxin.flight.internal.arguments.Argument
+import mu.KotlinLogging
 import org.reflections.Reflections
 import org.reflections.scanners.MethodParameterNamesScanner
-import org.reflections.scanners.SubTypesScanner
-import org.slf4j.LoggerFactory
+import org.reflections.scanners.Scanners
 import java.lang.reflect.Modifier
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.javaMethod
 import kotlin.reflect.jvm.jvmErasure
-import kotlin.reflect.typeOf
 
-class Indexer(private val packageName: String) {
+public class Indexer(private val packageName: String) {
+    public companion object {
+        private val log = KotlinLogging.logger {  }
+    }
 
-    private val reflections: Reflections = Reflections(packageName, MethodParameterNamesScanner(), SubTypesScanner())
+    private val reflections: Reflections = Reflections(packageName, MethodParameterNamesScanner(), Scanners.SubTypes)
 
-    fun getCogs(): List<Cog> {
+    public fun getCogs(): List<Cog> {
         val cogs = reflections.getSubTypesOf(Cog::class.java)
-        log.debug("Discovered ${cogs.size} cogs in $packageName")
+        log.debug { "Discovered ${cogs.size} cogs in $packageName" }
 
         return cogs
             .filter { !Modifier.isAbstract(it.modifiers) && !it.isInterface && Cog::class.java.isAssignableFrom(it) }
             .map { it.getDeclaredConstructor().newInstance() }
     }
 
-    fun getCommands(cog: Cog): List<KFunction<*>> {
-        log.debug("Scanning ${cog::class.simpleName} for commands...")
+    public fun getCommands(cog: Cog): List<KFunction<*>> {
+        log.debug { "Scanning ${cog::class.simpleName} for commands..." }
 
         val cogClass = cog::class
         val commands = cogClass.members
             .filterIsInstance<KFunction<*>>()
             .filter { it.hasAnnotation<Command>() }
 
-        log.debug("Found ${commands.size} commands in cog ${cog::class.simpleName}")
+        log.debug { "Found ${commands.size} commands in cog ${cog::class.simpleName}" }
         return commands.toList()
     }
 
-    fun loadCommand(meth: KFunction<*>, cog: Cog): CommandFunction {
+    public fun loadCommand(meth: KFunction<*>, cog: Cog): CommandFunction {
         val name = meth.findAnnotation<Name>()?.name
             ?: meth.name
 
@@ -89,8 +91,8 @@ class Indexer(private val packageName: String) {
         return CommandFunction(name, category, properties, rateLimit, subcommands, meth, cog, arguments, ctxParam)
     }
 
-    fun getSubCommands(cog: Cog): List<SubCommandFunction> {
-        log.debug("Scanning ${cog::class.simpleName} for sub-commands...")
+    public fun getSubCommands(cog: Cog): List<SubCommandFunction> {
+        log.debug { "Scanning ${cog::class.simpleName} for sub-commands..." }
 
         val cogClass = cog::class
         val subcommands = cogClass.members
@@ -98,7 +100,7 @@ class Indexer(private val packageName: String) {
             .filter { it.hasAnnotation<SubCommand>() }
             .map { loadSubCommand(it, cog) }
 
-        log.debug("Found ${subcommands.size} sub-commands in cog ${cogClass.simpleName}")
+        log.debug { "Found ${subcommands.size} sub-commands in cog ${cogClass.simpleName}" }
         return subcommands.toList()
     }
 
@@ -145,16 +147,16 @@ class Indexer(private val packageName: String) {
         for (p in parameters) {
             val pName = p.findAnnotation<Name>()?.name ?: p.name ?: p.index.toString()
             var type = p.type.jvmErasure.javaObjectType
-            var greedy = p.findAnnotation<Greedy>()?.let { GreedyInfo(it.type, it.min..it.max) }
+            var greedy = p.findAnnotation<Greedy>()
             val isOptional = p.isOptional
             val isNullable = p.type.isMarkedNullable
             val isTentative = p.hasAnnotation<Tentative>()
 
             if (p.type.jvmErasure.isSubclassOf(Collection::class)) {
                 type = p.type.arguments.first().type!!.jvmErasure.javaObjectType
-                greedy = GreedyInfo(GreedyType.Regular, greedy?.range ?: 1..Int.MAX_VALUE)
+                greedy = Greedy(Greedy.Type.Normal, greedy?.min ?: 1, greedy?.max ?: Int.MAX_VALUE)
             } else if (greedy != null) {
-                greedy = GreedyInfo(GreedyType.Computed, greedy.range)
+                greedy = Greedy(Greedy.Type.Computed, greedy.min, greedy.max)
             }
 
             if (isTentative && !(isNullable || isOptional)) {
@@ -166,9 +168,4 @@ class Indexer(private val packageName: String) {
 
         return arguments
     }
-
-    companion object {
-        private val log = LoggerFactory.getLogger(Indexer::class.java)
-    }
-
 }

@@ -16,4 +16,4 @@ import net.dv8tion.jda.api.Permission
  * @param permissions
  *   List of [Permission]s we are lacking.
  */
-data class MissingPermissionsEvent(val ctx: Context, val command: CommandFunction, val permissions: List<Permission>) : Event
+public data class MissingPermissionsEvent(val ctx: Context, val command: CommandFunction, val permissions: List<Permission>) : Event

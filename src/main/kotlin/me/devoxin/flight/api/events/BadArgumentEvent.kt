@@ -7,7 +7,7 @@ import me.devoxin.flight.api.exceptions.BadArgument
 /**
  * Emitted when an invalid argument is passed.
  */
-data class BadArgumentEvent(
+public data class BadArgumentEvent(
     val ctx: Context,
     val command: CommandFunction,
     val error: BadArgument

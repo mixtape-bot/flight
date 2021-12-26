@@ -1,21 +1,24 @@
 package me.devoxin.flight.internal.entities
 
+import arrow.core.Option
+import arrow.core.none
 import me.devoxin.flight.api.Context
 import me.devoxin.flight.api.entities.Cog
 import me.devoxin.flight.internal.arguments.Argument
+import me.devoxin.flight.internal.utils.some
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.callSuspendBy
 import kotlin.reflect.full.instanceParameter
 
-abstract class Executable(
-    val name: String,
-    val method: KFunction<*>,
-    val cog: Cog,
-    val arguments: List<Argument>,
+public abstract class Executable(
+    public val name: String,
+    public val method: KFunction<*>,
+    public val cog: Cog,
+    public val arguments: List<Argument>,
     private val contextParameter: KParameter
 ) {
-    open suspend fun execute(ctx: Context, args: HashMap<KParameter, Any?>): Result<Boolean> {
+    public open suspend fun execute(ctx: Context, args: MutableMap<KParameter, Any?>): Option<Throwable> {
         method.instanceParameter?.let { args[it] = cog }
 
         /* put the context parameter in place. */
@@ -29,9 +32,9 @@ abstract class Executable(
                 method.callBy(args)
             }
 
-            Result.success(true)
+            none()
         } catch (ex: Throwable) {
-            Result.failure(ex)
+            some(ex.cause ?: ex)
         }
     }
 }

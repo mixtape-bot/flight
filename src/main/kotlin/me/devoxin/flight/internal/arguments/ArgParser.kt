@@ -1,23 +1,70 @@
 package me.devoxin.flight.internal.arguments
 
+import arrow.core.Option
+import arrow.core.computations.ResultEffect.bind
+import arrow.core.none
+import arrow.core.toOption
 import me.devoxin.flight.api.Context
-import me.devoxin.flight.api.annotations.GreedyType
+import me.devoxin.flight.api.annotations.Greedy
+import me.devoxin.flight.api.annotations.Greedy.Companion.range
 import me.devoxin.flight.api.exceptions.BadArgument
-import me.devoxin.flight.api.exceptions.ParserNotRegistered
+import me.devoxin.flight.api.exceptions.ResolverNotRegistered
 import me.devoxin.flight.internal.entities.Executable
-import me.devoxin.flight.internal.parsers.Parser
-import java.util.*
+import me.devoxin.flight.internal.arguments.resolvers.Resolver
+import me.devoxin.flight.internal.utils.splice
+import me.devoxin.flight.internal.utils.unwrap
+import java.util.HashMap
 import kotlin.reflect.KParameter
 
-class ArgParser(
-    private val ctx: Context,
-    private val delimiter: Char,
-    commandArgs: List<String>
-) {
-    private val delimiterStr = delimiter.toString()
-    private var args = commandArgs.toMutableList()
+public class ArgParser(private val ctx: Context, private val delimiter: Char, args: List<String>) {
+    public companion object {
+        public val resolvers: HashMap<Class<*>, Resolver<*>> = hashMapOf()
 
-    private fun take(amount: Int) = args.take(amount).onEach { args.removeAt(0) }
+        public fun <T> useResolver(javaClass: Class<T>, resolver: Resolver<T>): Companion {
+            resolvers[javaClass] = resolver
+            return this
+        }
+
+        public inline fun <reified T : Any> useResolver(resolver: Resolver<T>): Companion =
+            useResolver(T::class.java, resolver)
+
+        public suspend fun parseArguments(ctx: Context, cmd: Executable, delimiter: Char): MutableMap<KParameter, Any?> {
+            if (cmd.arguments.isEmpty()) {
+                return mutableMapOf()
+            }
+
+            val args = ctx.args.takeUnless { delimiter == ' ' } ?: ctx.args
+                .joinToString(" ")
+                .split(delimiter)
+                .toMutableList()
+
+            val parser = ArgParser(ctx, delimiter, args)
+            val resolvedArgs = mutableMapOf<KParameter, Any?>()
+
+            for (arg in cmd.arguments) {
+                val res = parser.resolve(arg)
+                val useValue = res != null || (arg.isNullable && !arg.optional) || (arg.isTentative && arg.isNullable)
+
+                if (useValue) {
+                    /* This will only place the argument into the map if the value is null,
+                       or if the parameter requires a value (i.e. marked nullable). */
+
+                    /* Commands marked optional already have a parameter, so they don't need user-provided values
+                       unless the argument was successfully resolved for that parameter. */
+
+                    resolvedArgs[arg.kparam] = res
+                }
+            }
+
+            return resolvedArgs
+        }
+    }
+
+    private val delimiterStr = delimiter.toString()
+    private var args = args.toMutableList()
+
+    private fun take(amount: Int) = args.splice(amount)
+
     private fun restore(argList: List<String>) = args.addAll(0, argList)
 
     private fun parseQuoted(): Pair<String, List<String>> {
@@ -36,24 +83,28 @@ class ArgParser(
                     argument.append(char)
                     escaping = false
                 }
+
                 char == '\\' -> escaping = true
-                quoting && char == '"' -> quoting = false // accept other quote chars
-                !quoting && char == '"' -> quoting = true // accept other quote chars
-                !quoting && char == delimiter -> {
-                    // Maybe this should throw? !test  blah -- Extraneous whitespace is ignored.
-                    if (argument.isEmpty()) continue@loop
-                    else break@loop
-                }
+
+                // accept other quote chars
+                quoting && char == '"' -> quoting = false
+
+                // accept other quote chars
+                !quoting && char == '"' -> quoting = true
+
+                // Maybe this should throw? !test  blah -- Extraneous whitespace is ignored.
+                !quoting && char == delimiter -> if (argument.isEmpty()) continue@loop else break@loop
+
                 else -> argument.append(char)
             }
         }
 
         argument.append('"')
 
-        val remainingArgs = StringBuilder().apply {
-            iterator.forEachRemaining { this.append(it) }
-        }
-        args = remainingArgs.toString().split(delimiter).toMutableList()
+        args = buildString { iterator.forEachRemaining(::append) }
+            .split(delimiter)
+            .toMutableList()
+
         return argument.toString() to original.split(delimiterStr)
     }
 
@@ -62,12 +113,17 @@ class ArgParser(
      */
     private fun getNextArgument(greedy: Boolean): Pair<String, List<String>> {
         val (argument, original) = when {
-            args.isEmpty() -> "" to emptyList()
+            args.isEmpty() ->
+                "" to emptyList()
+
             greedy -> {
                 val args = take(args.size)
                 args.joinToString(delimiterStr) to args
             }
-            args[0].startsWith('"') && delimiter == ' ' -> parseQuoted() // accept other quote chars
+
+            args[0].startsWith('"') && delimiter == ' ' ->
+                parseQuoted() // accept other quote chars
+
             else -> {
                 val taken = take(1)
                 taken.joinToString(delimiterStr) to taken
@@ -82,69 +138,58 @@ class ArgParser(
         return unquoted to original
     }
 
-    suspend fun parse(arg: Argument): Any? {
-        val parser = parsers[arg.type]
-            ?: throw ParserNotRegistered("No parsers registered for `${arg.type}`")
+    public suspend fun resolve(arg: Argument): Any? {
+        val resolver = resolvers[arg.type] as? Resolver<Any>
+            ?: throw ResolverNotRegistered("No resolvers registered for `${arg.type}`")
 
-        var result: Any? = null
-        if (arg.greedy != null) {
-            when (arg.greedy.type) {
-                GreedyType.Regular -> {
-                    val resolved = mutableListOf<Any?>()
-                    val took = mutableListOf<String>()
-                    while (args.isNotEmpty()) {
-                        val (argument, original) = getNextArgument(false)
-                        val parsed = if (argument.isEmpty()) Optional.empty() else argument
-                            .runCatching { parser.parse(ctx, argument) }
-                            .getOrElse { throw BadArgument(arg, argument, it) }
+        return when (val type = arg.greedy?.type) {
+            Greedy.Type.Normal -> {
+                val took = mutableListOf<String>()
 
-                        if (!parsed.isPresent) {
-                            if (arg.isTentative) {
-                                restore(original)
-                            }
+                val args = mutableListOf<Any>()
+                while (this.args.isNotEmpty()) {
+                    val (param, raw) = getNextArgument(false)
 
-                            break
+                    /* resolve the argument. */
+                    val resolved = if (param.isEmpty()) none() else resolver
+                        .resolveCatching(ctx, param, arg)
+                        .bind()
+
+                    if (resolved.isEmpty()) {
+                        if (arg.isTentative) {
+                            restore(raw)
                         }
 
-                        took.add(original.joinToString(delimiterStr))
-                        resolved.add(parsed.orElse(null))
+                        break
                     }
 
-                    val canSubstitute = arg.isNullable || arg.optional
-                    if (!canSubstitute && resolved.size !in arg.greedy.range) {
-                        val argument = took.joinToString(delimiterStr)
-                        throw BadArgument(arg, argument, IllegalArgumentException("Not enough arguments"))
-                    }
-
-                    result = if (arg.isNullable && resolved.isEmpty()) null else resolved
+                    took.add(raw.joinToString(delimiterStr))
+                    args.add(resolved.unwrap())
                 }
 
-                GreedyType.Computed -> {
-                    val (argument, original) = getNextArgument(true)
-                    val resolved = (if (argument.isEmpty()) Optional.empty() else argument
-                        .runCatching { parser.parse(ctx, argument) }
-                        .getOrElse { throw BadArgument(arg, argument, it) })
-                        .orElse(null)
-
-                    result = parse(arg, argument to original, resolved)
+                val canSubstitute = arg.isNullable || arg.optional
+                if (!canSubstitute && args.size !in arg.greedy.range) {
+                    val argument = took.joinToString(delimiterStr)
+                    throw BadArgument(arg, argument, IllegalArgumentException("Not enough arguments"))
                 }
+
+                if (arg.isNullable && args.isEmpty()) null else args
             }
-        } else {
-            val (argument, original) = getNextArgument(false)
-            val resolved = (if (argument.isEmpty()) Optional.empty() else argument
-                .runCatching { parser.parse(ctx, argument) }
-                .getOrElse { throw BadArgument(arg, argument, it) })
-                .orElse(null)
 
-            result = parse(arg, argument to original, resolved)
+            else -> {
+                val (param, raw) = getNextArgument(type == Greedy.Type.Computed)
+                val resolved = if (param.isEmpty()) none() else resolver
+                    .resolveCatching(ctx, param, arg)
+                    .bind()
+
+                resolve(arg, param to raw, resolved)
+            }
         }
-
-        return result
     }
 
-    private fun parse(arg: Argument, argument: Pair<String, List<String>>, value: Any?): Any? {
+    private fun resolve(arg: Argument, argument: Pair<String, List<String>>, value: Option<Any>): Any? {
         val canSubstitute = arg.isTentative || arg.isNullable || (arg.optional && argument.first.isEmpty())
-        if (value == null && !canSubstitute) {
+        if (value.isEmpty() && !canSubstitute) {
             // canSubstitute -> Whether we can pass null or the default value.
             // This should throw if the result is not present, and one of the following is not true:
             // - The arg is marked tentative (isTentative)
@@ -155,47 +200,10 @@ class ArgParser(
             throw BadArgument(arg, argument.first)
         }
 
-        if (value == null && arg.isTentative) {
+        if (value.isEmpty() && arg.isTentative) {
             restore(argument.second)
         }
 
-        return value
-    }
-
-    companion object {
-        val parsers = hashMapOf<Class<*>, Parser<*>>()
-
-        suspend fun parseArguments(
-            cmd: Executable,
-            ctx: Context,
-            delimiter: Char
-        ): HashMap<KParameter, Any?> {
-            if (cmd.arguments.isEmpty()) {
-                return hashMapOf()
-            }
-
-            val args = ctx.args.takeUnless { delimiter == ' ' } ?: ctx.args
-                .joinToString(" ")
-                .split(delimiter)
-                .toMutableList()
-
-            val parser = ArgParser(ctx, delimiter, args)
-
-            val resolvedArgs = hashMapOf<KParameter, Any?>()
-            for (arg in cmd.arguments) {
-                val res = parser.parse(arg)
-                val useValue = res != null || (arg.isNullable && !arg.optional) || (arg.isTentative && arg.isNullable)
-
-                if (useValue) {
-                    //This will only place the argument into the map if the value is null,
-                    // or if the parameter requires a value (i.e. marked nullable).
-                    //Commands marked optional already have a parameter so they don't need user-provided values
-                    // unless the argument was successfully resolved for that parameter.
-                    resolvedArgs[arg.kparam] = res
-                }
-            }
-
-            return resolvedArgs
-        }
+        return value.orNull()
     }
 }
