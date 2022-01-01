@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-  compile 'gg.mixtape:Flight:VERSION'
+  compile 'gg.mixtape:flight:VERSION'
 }
 ```
 
